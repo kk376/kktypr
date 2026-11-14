@@ -36,6 +36,7 @@ impl Exercise {
         self.exercise_type == ExerciseType::WarmUp
             && !self.title.contains("Pangram")
             && !self.title.to_lowercase().contains("code")
+            && !self.title.to_lowercase().contains("systems")
     }
 }
 
@@ -557,6 +558,258 @@ impl Course {
                         },
                     ],
                 },
+                Lesson {
+                    number: 2,
+                    title: "Arrows & Comparison: -> => <= >= == !=".to_string(),
+                    new_keys: vec!['-', '>', '=', '<', '!', '+'],
+                    finger_guidance: "Left pinky reaches ! and +, right pinky/ring reaches = < >.".to_string(),
+                    exercises: vec![
+                        Exercise {
+                            exercise_type: ExerciseType::WarmUp,
+                            title: "Arrow & Operator Warm-Up".to_string(),
+                            prompt: "Build muscle memory for compound operators and arrows.".to_string(),
+                            target_text: "-> => == != <= >= += -= *= /= -> => == != <= >=".to_string(),
+                            minimum_accuracy: 92.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::WordDrill,
+                            title: "Comparison & Assignment Drill".to_string(),
+                            prompt: "Type comparison statements and assignment operators.".to_string(),
+                            target_text: "x => x * 2; if a == b && c != d || e <= f { return Ok(1); }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::SentenceDrill,
+                            title: "Match Arms & Lambda Expressions".to_string(),
+                            prompt: "Type pattern matching arms with fat arrows and guards.".to_string(),
+                            target_text: "match signal { Ok(val) => val.process(), Err(e) if e.is_timeout() => retry(), Err(_) => abort() }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::LessonReview,
+                            title: "Control Flow Certification".to_string(),
+                            prompt: "Demonstrate accuracy on compound logical conditions.".to_string(),
+                            target_text: "let delta = (next_val - prev_val) >= threshold && max_limit != 0 || offset < baseline;".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                    ],
+                },
+                Lesson {
+                    number: 3,
+                    title: "Semicolons, Colons & Path Operators: ; : :: , .".to_string(),
+                    new_keys: vec![';', ':', ',', '.'],
+                    finger_guidance: "Right pinky strikes ; and Shift+; for :. Right middle and ring reach , and . on bottom row.".to_string(),
+                    exercises: vec![
+                        Exercise {
+                            exercise_type: ExerciseType::WarmUp,
+                            title: "Scope & Path Warm-Up".to_string(),
+                            prompt: "Type colons, semicolons, and path qualification symbols.".to_string(),
+                            target_text: ":: : ; :: : ; std::sync::Arc; std::collections::HashMap; std::path::PathBuf;".to_string(),
+                            minimum_accuracy: 92.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::WordDrill,
+                            title: "Module Imports & Declarations".to_string(),
+                            prompt: "Type nested use declarations and imports.".to_string(),
+                            target_text: "use std::sync::atomic::{AtomicBool, Ordering}; use std::time::{Duration, Instant};".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::SentenceDrill,
+                            title: "Struct Definition & Fields".to_string(),
+                            prompt: "Type typed struct fields and visibility specifiers.".to_string(),
+                            target_text: "pub struct Config { pub host: String, pub port: u16, pub timeout_ms: u64, pub enabled: bool }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::LessonReview,
+                            title: "Trait Bounds & Scopes Certification".to_string(),
+                            prompt: "Type generic struct implementations with trait bounds.".to_string(),
+                            target_text: "impl<K: std::hash::Hash + Eq, V: Clone> Cache<K, V> { pub fn new() -> Self { Self { map: HashMap::new() } } }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                    ],
+                },
+                Lesson {
+                    number: 4,
+                    title: "Pipes, Ampersands & Bitwise Operators: | || & && ! ~ ^".to_string(),
+                    new_keys: vec!['|', '&', '!', '~', '^'],
+                    finger_guidance: "Right pinky reaches | with Shift+\\. Left pinky and index reach ! ~ ^ &.".to_string(),
+                    exercises: vec![
+                        Exercise {
+                            exercise_type: ExerciseType::WarmUp,
+                            title: "Bitwise & Logic Warm-Up".to_string(),
+                            prompt: "Type boolean and bitwise operator pairs.".to_string(),
+                            target_text: "& && | || ! ~ ^ & && | || ! ~ ^ & && | || ! ~ ^".to_string(),
+                            minimum_accuracy: 92.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::WordDrill,
+                            title: "Boolean Condition Drill".to_string(),
+                            prompt: "Type compound conditional statements.".to_string(),
+                            target_text: "if (is_valid && !is_empty) || (has_token && has_access) { proceed(); }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::SentenceDrill,
+                            title: "Bitmasking & Flags".to_string(),
+                            prompt: "Type low-level bit shifting and masking expressions.".to_string(),
+                            target_text: "let mask: u32 = (1 << 4) | (1 << 2) | (1 << 0); let flags = header.flags() & !mask;".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::LessonReview,
+                            title: "Pattern Matching with Pipes".to_string(),
+                            prompt: "Type multi-pattern match arms and error handling.".to_string(),
+                            target_text: "match token { Token::Ident(id) | Token::Keyword(id) => emit(id), Token::Eof | Token::Whitespace => skip() }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                    ],
+                },
+                Lesson {
+                    number: 5,
+                    title: "Quotes, Strings & Regex Tokens: \" ' ` \\ / $".to_string(),
+                    new_keys: vec!['"', '\'', '`', '\\', '/', '$'],
+                    finger_guidance: "Right pinky strikes ' and \", left pinky reaches ` and ~, right index reaches / and pinky \\.".to_string(),
+                    exercises: vec![
+                        Exercise {
+                            exercise_type: ExerciseType::WarmUp,
+                            title: "Quote & Slash Warm-Up".to_string(),
+                            prompt: "Type quotation marks, backslashes, and path delimiters.".to_string(),
+                            target_text: "\"str\" 'c' `lit` \\n \\t \\r /path/to/file \"$var\" 'a' \"b\"".to_string(),
+                            minimum_accuracy: 92.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::WordDrill,
+                            title: "String Interpolation & Regex".to_string(),
+                            prompt: "Type formatted string templates and regular expressions.".to_string(),
+                            target_text: "let path = format!(\"{}/{}.json\", base_dir, filename); let re = Regex::new(r\"^\\d{4}-\\d{2}-\\d{2}$\");".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::SentenceDrill,
+                            title: "Shell Automation & Path Builders".to_string(),
+                            prompt: "Type shell command strings and quoted path parameters.".to_string(),
+                            target_text: "git commit -m \"feat(core): sanitize path inputs\" && printf \"%s\\n\" \"$output\" > build.log".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::LessonReview,
+                            title: "Escape Sequences Certification".to_string(),
+                            prompt: "Type complex escaped logging statements and URLs.".to_string(),
+                            target_text: "println!(\"Response [status={}]: \\\"{}\\\" from endpoint /api/v1/auth\", code, body);".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                    ],
+                },
+                Lesson {
+                    number: 6,
+                    title: "Generics, Turbofish & Lifetimes: < > ::< > 'a &mut".to_string(),
+                    new_keys: vec!['<', '>', ':', '\'', '&'],
+                    finger_guidance: "Shift comma and dot for < >, right pinky for : and '.".to_string(),
+                    exercises: vec![
+                        Exercise {
+                            exercise_type: ExerciseType::WarmUp,
+                            title: "Generic Syntax Warm-Up".to_string(),
+                            prompt: "Type generic angle brackets and lifetime annotations.".to_string(),
+                            target_text: "<T> <K, V> ::<T> ::<Vec<String>> &'a str &'a mut [u8] <T: Clone>".to_string(),
+                            minimum_accuracy: 92.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::WordDrill,
+                            title: "Turbofish & Collection Transforms".to_string(),
+                            prompt: "Type turbofish parsing and collection collectors.".to_string(),
+                            target_text: "let nums = raw.split(',').map(str::trim).filter_map(|s| s.parse::<usize>().ok()).collect::<Vec<_>>();".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::SentenceDrill,
+                            title: "Generic Lifetime Bounds".to_string(),
+                            prompt: "Type generic function signatures with explicit lifetime bounds.".to_string(),
+                            target_text: "pub fn filter_active<'a, T: Identifiable + 'a>(items: &'a [T]) -> Vec<&'a T> { items.iter().filter(|i| i.is_active()).collect() }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::LessonReview,
+                            title: "Zero-Cost Generic Pipeline".to_string(),
+                            prompt: "Type deserialization and typed container declarations.".to_string(),
+                            target_text: "let parsed: Result<HashMap<String, Vec<u8>>, Error> = serde_json::from_str(&payload);".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                    ],
+                },
+                Lesson {
+                    number: 7,
+                    title: "Async/Await & Functional Pipelines: ? .map .filter .await".to_string(),
+                    new_keys: vec!['?', '.', '_', '-'],
+                    finger_guidance: "Right pinky reaches ? with Shift+/, right ring for dot, left pinky for _.".to_string(),
+                    exercises: vec![
+                        Exercise {
+                            exercise_type: ExerciseType::WarmUp,
+                            title: "Pipeline Operator Warm-Up".to_string(),
+                            prompt: "Type method chaining calls and error try operators.".to_string(),
+                            target_text: ".map() .filter() .unwrap() .unwrap_or_default() .ok()? .await? .as_ref()".to_string(),
+                            minimum_accuracy: 92.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::WordDrill,
+                            title: "Async File Operations".to_string(),
+                            prompt: "Type async I/O function calls with error propagation.".to_string(),
+                            target_text: "let mut file = File::open(&path).await?; file.read_to_end(&mut buffer).await?; Ok(buffer)".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::SentenceDrill,
+                            title: "Functional Stream Aggregation".to_string(),
+                            prompt: "Type functional filter and mapping pipeline expressions.".to_string(),
+                            target_text: "let total = entries.into_iter().filter(|e| e.is_valid).map(|e| e.score * 2).sum::<u64>();".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::LessonReview,
+                            title: "Async Join & Concurrency".to_string(),
+                            prompt: "Type concurrent future join operations with error unwraps.".to_string(),
+                            target_text: "let (res1, res2) = tokio::join!(fetch_node(&addr1), fetch_node(&addr2)); let combined = res1? + res2?;".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                    ],
+                },
+                Lesson {
+                    number: 8,
+                    title: "Developer Certification: Idiomatic Systems Code".to_string(),
+                    new_keys: vec!['*', '&', '[', ']', '{', '}', '!', '?'],
+                    finger_guidance: "Comprehensive integration of all developer syntax, symbols, and operators.".to_string(),
+                    exercises: vec![
+                        Exercise {
+                            exercise_type: ExerciseType::WarmUp,
+                            title: "Systems Code Warm-Up".to_string(),
+                            prompt: "Type systems network connection and result return.".to_string(),
+                            target_text: "fn connect(addr: &str) -> io::Result<TcpStream> { TcpStream::connect(addr) }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::WordDrill,
+                            title: "Macro & Unsafe Pointer Ops".to_string(),
+                            prompt: "Type attribute macros and low-level memory operations.".to_string(),
+                            target_text: "#[inline(always)] pub unsafe fn fast_copy<T: Copy>(src: *const T, dst: *mut T, count: usize) { std::ptr::copy_nonoverlapping(src, dst, count); }".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::SentenceDrill,
+                            title: "Concurrent Channel Dispatch".to_string(),
+                            prompt: "Type async task spawn and channel message processing loops.".to_string(),
+                            target_text: "tokio::spawn(async move { while let Some(msg) = rx.recv().await { if let Err(e) = tx.send(msg).await { eprintln!(\"Err: {}\", e); break; } } });".to_string(),
+                            minimum_accuracy: 94.0,
+                        },
+                        Exercise {
+                            exercise_type: ExerciseType::LessonReview,
+                            title: "Production Systems Certification".to_string(),
+                            prompt: "Prove mastery of complex systems syntax under strict accuracy criteria.".to_string(),
+                            target_text: "impl<T: Send + Sync + 'static> Drop for ThreadWorkerPool<T> { fn drop(&mut self) { for w in &mut self.workers { if let Some(t) = w.handle.take() { let _ = t.join(); } } } }".to_string(),
+                            minimum_accuracy: 95.0,
+                        },
+                    ],
+                },
             ],
         }
     }
@@ -582,7 +835,14 @@ mod tests {
     #[test]
     fn test_developer_course() {
         let dev_course = Course::developer_special();
-        assert!(!dev_course.lessons.is_empty());
+        assert_eq!(dev_course.lessons.len(), 8);
+        for lesson in &dev_course.lessons {
+            assert_eq!(lesson.exercises.len(), 4);
+            for ex in &lesson.exercises {
+                assert!(!ex.target_text.is_empty());
+                assert!(ex.minimum_accuracy >= 90.0);
+            }
+        }
     }
 
     #[test]

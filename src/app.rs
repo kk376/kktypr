@@ -46,6 +46,7 @@ pub struct App {
     pub selected_lesson_idx: usize,
     pub selected_exercise_idx: usize,
     pub selected_profile_idx: usize,
+    pub selected_speed_test_idx: usize,
     pub active_session: Option<TypingSession>,
     pub last_metrics: Option<TypingMetrics>,
     pub game: WordDropGame,
@@ -88,6 +89,7 @@ impl App {
             selected_lesson_idx: 0,
             selected_exercise_idx: 0,
             selected_profile_idx: 0,
+            selected_speed_test_idx: 0,
             active_session: None,
             last_metrics: None,
             game: WordDropGame::new(80, 24),
@@ -392,9 +394,12 @@ impl App {
                 self.confirm_reset_stats = true;
                 self.status_notification = None;
             }
-            KeyCode::Enter => match self.selected_menu_idx {
+            KeyCode::Enter | KeyCode::Char('l') => match self.selected_menu_idx {
                 0 => self.navigate_to_mode(AppScreen::CourseSelect),
-                1 => self.navigate_to_mode(AppScreen::SpeedTestSelect),
+                1 => {
+                    self.selected_speed_test_idx = 0;
+                    self.navigate_to_mode(AppScreen::SpeedTestSelect);
+                }
                 2 => self.navigate_to_mode(AppScreen::TargetedReview),
                 3 => {
                     self.game.reset(80, 24);
@@ -435,7 +440,7 @@ impl App {
                     self.selected_profile_idx += 1;
                 }
             }
-            KeyCode::Enter => {
+            KeyCode::Enter | KeyCode::Char('l') => {
                 if let Some(target_p) = self.profile_store.profiles.get(self.selected_profile_idx) {
                     let target_name = target_p.name.clone();
                     self.profile_store.switch_profile(&target_name);
@@ -479,7 +484,7 @@ impl App {
                     }
                 }
             }
-            KeyCode::Esc | KeyCode::Char('q') => {
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => {
                 self.screen = AppScreen::MainMenu;
             }
             _ => {}
@@ -498,12 +503,12 @@ impl App {
                     self.selected_course_idx += 1;
                 }
             }
-            KeyCode::Enter => {
+            KeyCode::Enter | KeyCode::Char('l') => {
                 self.selected_lesson_idx = 0;
                 self.selected_exercise_idx = self.default_exercise_idx_for_lesson(0);
                 self.screen = AppScreen::LessonSelect;
             }
-            KeyCode::Esc | KeyCode::Char('q') => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => self.screen = AppScreen::MainMenu,
             _ => {}
         }
     }
@@ -610,7 +615,7 @@ impl App {
                     }
                 }
             }
-            KeyCode::Esc | KeyCode::Char('q') => {
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => {
                 self.screen = self.session_origin;
                 if self.screen == AppScreen::LessonSelect {
                     self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
@@ -625,20 +630,47 @@ impl App {
 
     fn handle_speed_test_menu_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Char('1') => self.start_speed_test(60),
-            KeyCode::Char('2') => self.start_speed_test(120),
-            KeyCode::Char('5') => self.start_speed_test(300),
-            KeyCode::Esc | KeyCode::Char('q') => self.screen = AppScreen::MainMenu,
+            KeyCode::Up | KeyCode::Char('k') => {
+                if self.selected_speed_test_idx > 0 {
+                    self.selected_speed_test_idx -= 1;
+                }
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                if self.selected_speed_test_idx + 1 < 3 {
+                    self.selected_speed_test_idx += 1;
+                }
+            }
+            KeyCode::Enter | KeyCode::Char('l') => {
+                let duration = match self.selected_speed_test_idx {
+                    0 => 60,
+                    1 => 120,
+                    _ => 300,
+                };
+                self.start_speed_test(duration);
+            }
+            KeyCode::Char('1') => {
+                self.selected_speed_test_idx = 0;
+                self.start_speed_test(60);
+            }
+            KeyCode::Char('2') => {
+                self.selected_speed_test_idx = 1;
+                self.start_speed_test(120);
+            }
+            KeyCode::Char('3') | KeyCode::Char('5') => {
+                self.selected_speed_test_idx = 2;
+                self.start_speed_test(300);
+            }
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => self.screen = AppScreen::MainMenu,
             _ => {}
         }
     }
 
     fn handle_targeted_review_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Enter | KeyCode::Char('p') => {
+            KeyCode::Enter | KeyCode::Char('p') | KeyCode::Char('l') => {
                 self.start_targeted_drill();
             }
-            KeyCode::Esc | KeyCode::Char('q') => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => self.screen = AppScreen::MainMenu,
             _ => {}
         }
     }
@@ -663,7 +695,7 @@ impl App {
 
     fn handle_stats_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') | KeyCode::Enter => self.screen = AppScreen::MainMenu,
             _ => {}
         }
     }
@@ -972,5 +1004,70 @@ mod tests {
         app.handle_key_event(key(KeyCode::Down));
         assert_eq!(app.selected_lesson_idx, 11);
         assert_eq!(app.selected_exercise_idx, 3); // Step 4 automatically selected!
+    }
+
+    #[test]
+    fn test_speed_test_selection_navigation_and_vim_keys() {
+        let mut app = App::new();
+        app.name_prompt = None;
+
+        // Navigate from MainMenu to SpeedTestSelect via vim 'l'
+        app.selected_menu_idx = 1;
+        app.handle_key_event(key(KeyCode::Char('l')));
+        assert_eq!(app.screen, AppScreen::SpeedTestSelect);
+        assert_eq!(app.selected_speed_test_idx, 0);
+
+        // Down arrow navigates to 2-minute benchmark (idx 1)
+        app.handle_key_event(key(KeyCode::Down));
+        assert_eq!(app.selected_speed_test_idx, 1);
+
+        // Vim 'j' navigates to 5-minute endurance (idx 2)
+        app.handle_key_event(key(KeyCode::Char('j')));
+        assert_eq!(app.selected_speed_test_idx, 2);
+
+        // Moving past bottom clamps at 2
+        app.handle_key_event(key(KeyCode::Down));
+        assert_eq!(app.selected_speed_test_idx, 2);
+
+        // Up arrow navigates back up (idx 1)
+        app.handle_key_event(key(KeyCode::Up));
+        assert_eq!(app.selected_speed_test_idx, 1);
+
+        // Vim 'k' navigates to top (idx 0)
+        app.handle_key_event(key(KeyCode::Char('k')));
+        assert_eq!(app.selected_speed_test_idx, 0);
+
+        // Moving past top clamps at 0
+        app.handle_key_event(key(KeyCode::Up));
+        assert_eq!(app.selected_speed_test_idx, 0);
+
+        // Enter starts 1-minute sprint (60s)
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::TypingActive);
+        assert_eq!(app.last_speed_test_secs, 60);
+
+        // Esc returns to SpeedTestSelect
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::SpeedTestSelect);
+
+        // Vim 'j' to 2-min benchmark, Vim 'l' starts test (120s)
+        app.handle_key_event(key(KeyCode::Char('j')));
+        assert_eq!(app.selected_speed_test_idx, 1);
+        app.handle_key_event(key(KeyCode::Char('l')));
+        assert_eq!(app.screen, AppScreen::TypingActive);
+        assert_eq!(app.last_speed_test_secs, 120);
+
+        // Esc returns to SpeedTestSelect
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::SpeedTestSelect);
+
+        // Vim 'h' returns to MainMenu
+        app.handle_key_event(key(KeyCode::Char('h')));
+        assert_eq!(app.screen, AppScreen::MainMenu);
+
+        // Vim 'q' in SpeedTestSelect returns to MainMenu
+        app.screen = AppScreen::SpeedTestSelect;
+        app.handle_key_event(key(KeyCode::Char('q')));
+        assert_eq!(app.screen, AppScreen::MainMenu);
     }
 }

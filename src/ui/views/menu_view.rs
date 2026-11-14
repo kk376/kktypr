@@ -292,35 +292,77 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
     frame.render_widget(help, chunks[1]);
 }
 
-pub fn render_speed_test_select(_app: &App, frame: &mut Frame) {
+pub fn render_speed_test_select(app: &App, frame: &mut Frame) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(10), Constraint::Length(3)])
+        .split(frame.area());
+
+    struct SpeedOption {
+        key_label: &'static str,
+        name: &'static str,
+        duration_label: &'static str,
+        desc: &'static str,
+    }
+
+    let options = [
+        SpeedOption {
+            key_label: "1",
+            name: "1-Minute Sprint",
+            duration_label: "60s",
+            desc: "Rapid cadence burst • Great for quick daily calibration",
+        },
+        SpeedOption {
+            key_label: "2",
+            name: "2-Minute Standard Benchmark",
+            duration_label: "120s",
+            desc: "Standard typing examination • Balances speed and continuous focus",
+        },
+        SpeedOption {
+            key_label: "5",
+            name: "5-Minute Endurance Assessment",
+            duration_label: "300s",
+            desc: "Full sustained performance audit • High focus cognitive stamina",
+        },
+    ];
+
+    let items: Vec<ListItem> = options
+        .iter()
+        .enumerate()
+        .map(|(idx, opt)| {
+            let is_selected = idx == app.selected_speed_test_idx;
+            if is_selected {
+                let line = Line::from(vec![
+                    Span::styled("  ▶  ", Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("[{}] ", opt.key_label), Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("{:<32}", opt.name), Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("({:<4})  ", opt.duration_label), Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("{} ", opt.desc), Style::default().fg(Color::Black).bg(Theme::ACCENT)),
+                ]);
+                ListItem::new(line)
+            } else {
+                let line = Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled(format!("[{}] ", opt.key_label), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("{:<32}", opt.name), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                    Span::styled(format!("({:<4})  ", opt.duration_label), Style::default().fg(Color::Cyan)),
+                    Span::styled(format!("{} ", opt.desc), Style::default().fg(Color::DarkGray)),
+                ]);
+                ListItem::new(line)
+            }
+        })
+        .collect();
+
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Speed Test Selection ")
+        .title(" Speed Test Selection (Enter: Start, ↑/k / ↓/j: Navigate, Esc/q: Back) ")
         .title_alignment(Alignment::Center)
         .border_style(Style::default().fg(Theme::ACCENT));
 
-    let content = vec![
-        Line::from(""),
-        Line::from(Span::styled("Select Test Duration:", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD))),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  [1] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::styled("1-Minute Sprint", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  [2] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::styled("2-Minute Standard Benchmark", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("  [5] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::styled("5-Minute Endurance Assessment", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(""),
-        Line::from(Span::styled("Press [1], [2], or [5] to begin  |  Esc to return to Main Menu", Style::default().fg(Color::DarkGray))),
-    ];
+    frame.render_widget(List::new(items).block(block), chunks[0]);
 
-    let p = Paragraph::new(content).block(block).alignment(Alignment::Center);
-    frame.render_widget(p, frame.area());
+    let help = Paragraph::new("Navigation: [↑/k] Up  |  [↓/j] Down  |  [Enter/l] Start Speed Test  |  [1/2/5] Direct  |  [Esc/q/h] Back")
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(Color::DarkGray));
+    frame.render_widget(help, chunks[1]);
 }
