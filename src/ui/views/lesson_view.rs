@@ -7,6 +7,7 @@ use ratatui::{
 };
 use crate::app::App;
 use crate::engine::session::CharStatus;
+use crate::ui::font3x::{get_glyph_3x, glyph_width};
 use crate::ui::keyboard::{get_finger_for_char, KeyboardWidget};
 use crate::ui::theme::Theme;
 
@@ -168,6 +169,113 @@ fn render_word_slot(
     spans
 }
 
+fn render_word_slot_3x(
+    word: &TargetWord<'_>,
+    word_idx: usize,
+    active_word_idx: usize,
+    cursor: usize,
+    statuses: &[CharStatus],
+    slot_width: usize,
+) -> [Vec<Span<'static>>; 4] {
+    let mut r0 = Vec::new();
+    let mut r1 = Vec::new();
+    let mut r2 = Vec::new();
+    let mut r3 = Vec::new();
+
+    let is_active_word = word_idx == active_word_idx;
+    let is_completed_word = word_idx < active_word_idx;
+    let prefix = if is_active_word { "▶ " } else if is_completed_word { "✓ " } else { "  " };
+    let prefix_style = if is_active_word {
+        Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)
+    } else if is_completed_word {
+        Style::default().fg(Theme::SUCCESS)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    };
+
+    r0.push(Span::styled(prefix, prefix_style));
+    r1.push(Span::styled(prefix, prefix_style));
+    r2.push(Span::styled(prefix, prefix_style));
+    r3.push(Span::styled(prefix, prefix_style));
+
+    let mut rendered_cols = 2; // for prefix
+
+    let is_at_trailing_space = cursor >= word.char_end && word.has_trailing_space && is_active_word;
+
+    for (offset, c) in word.text.chars().enumerate() {
+        let global_idx = word.char_start + offset;
+        let glyph = get_glyph_3x(c);
+        let g_width = glyph_width(c) + 1;
+        rendered_cols += g_width;
+
+        let (g_style, guide_style) = if is_completed_word {
+            (
+                Style::default().fg(Theme::SUCCESS),
+                Style::default().fg(Color::DarkGray),
+            )
+        } else if is_active_word {
+            if global_idx < cursor {
+                match statuses.get(global_idx).copied().unwrap_or(CharStatus::Pending) {
+                    CharStatus::Correct => (
+                        Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD),
+                        Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD),
+                    ),
+                    CharStatus::Incorrect => (
+                        Style::default().fg(Color::White).bg(Theme::ERROR).add_modifier(Modifier::BOLD),
+                        Style::default().fg(Color::White).bg(Theme::ERROR).add_modifier(Modifier::BOLD),
+                    ),
+                    CharStatus::Pending => (
+                        Style::default().fg(Color::White),
+                        Style::default().fg(Color::White),
+                    ),
+                }
+            } else if global_idx == cursor {
+                (
+                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                )
+            } else {
+                (
+                    Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                    Style::default().fg(Color::White),
+                )
+            }
+        } else {
+            (
+                Style::default().fg(Color::Rgb(110, 120, 140)),
+                Style::default().fg(Color::DarkGray),
+            )
+        };
+
+        r0.push(Span::styled(format!("{} ", glyph[0]), g_style));
+        r1.push(Span::styled(format!("{} ", glyph[1]), g_style));
+        r2.push(Span::styled(format!("{} ", glyph[2]), g_style));
+        let width_val = glyph_width(c).saturating_sub(2).max(1);
+        let guide_str = format!(" {:^width_val$} ", c.to_ascii_uppercase());
+        r3.push(Span::styled(guide_str, guide_style));
+    }
+
+    if is_at_trailing_space {
+        let space_prompt_style = Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD);
+        r0.push(Span::styled("┌───────┐ ", Style::default().fg(Color::Yellow)));
+        r1.push(Span::styled("│ SPACE │ ", space_prompt_style));
+        r2.push(Span::styled("└───────┘ ", Style::default().fg(Color::Yellow)));
+        r3.push(Span::styled(" [␣ BAR]  ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)));
+        rendered_cols += 10;
+    }
+
+    let pad = slot_width.saturating_sub(rendered_cols);
+    if pad > 0 {
+        let pad_str = " ".repeat(pad);
+        r0.push(Span::raw(pad_str.clone()));
+        r1.push(Span::raw(pad_str.clone()));
+        r2.push(Span::raw(pad_str.clone()));
+        r3.push(Span::raw(pad_str));
+    }
+
+    [r0, r1, r2, r3]
+}
+
 pub fn render_typing_active(app: &App, frame: &mut Frame) {
     if app.active_session.is_none() {
         return;
@@ -206,15 +314,29 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
         None => return,
     };
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Instruction header
-            Constraint::Length(9), // Large, structured Block Typing Stage
-            Constraint::Length(10), // Centered interactive keyboard
-            Constraint::Min(3),    // Finger Guide Pill
-        ])
-        .split(area);
+    let is_magnified = area.width >= 75 && area.height >= 30;
+
+    let chunks = if is_magnified {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3),  // Instruction header
+                Constraint::Length(14), // Magnified 3-Row Block Typing Stage
+                Constraint::Min(16),    // Centered interactive boxed keyboard
+                Constraint::Length(3),  // Finger Guide Pill
+            ])
+            .split(area)
+    } else {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Instruction header
+                Constraint::Length(9), // Compact Block Typing Stage
+                Constraint::Min(9),    // Compact interactive keyboard
+                Constraint::Length(3), // Finger Guide Pill
+            ])
+            .split(area)
+    };
 
     // 1. Instruction prompt banner
     let prompt_desc = if let Some(ex) = app.current_exercise() {
@@ -254,43 +376,91 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
     }
     active_word_idx = active_word_idx.min(total_words.saturating_sub(1));
 
-    // Page / Block calculations
-    let current_block_idx = active_word_idx / WORDS_PER_BLOCK;
-    let total_blocks = total_words.div_ceil(WORDS_PER_BLOCK);
-    let block_start = current_block_idx * WORDS_PER_BLOCK;
-    let block_end = (block_start + WORDS_PER_BLOCK).min(total_words);
-    let block_words = &words[block_start..block_end];
+    let (stage_lines, current_block_idx, total_blocks) = if is_magnified {
+        // Calculate dynamic words per line to fit the width comfortably
+        let approx_word_len = words
+            .get(active_word_idx)
+            .map(|w| w.text.chars().count())
+            .unwrap_or(4);
+        let slot_width = (approx_word_len * 4 + 14).max(22);
+        let avail_width = (area.width as usize).saturating_sub(6);
+        let words_per_line = (avail_width / slot_width).clamp(2, 4);
+        let words_per_block = words_per_line * 2;
 
-    // Determine slot width and spaced letters based on longest word in current block
-    let max_word_len = block_words.iter().map(|w| w.text.chars().count()).max().unwrap_or(4);
-    let is_spaced_letters = max_word_len <= 5;
-    let slot_width = if is_spaced_letters {
-        (max_word_len * 2 + 6).max(18)
+        let cur_block = active_word_idx / words_per_block;
+        let tot_blocks = total_words.div_ceil(words_per_block);
+        let block_start = cur_block * words_per_block;
+        let block_end = (block_start + words_per_block).min(total_words);
+
+        let line1_end = (block_start + words_per_line).min(block_end);
+        let mut l1: [Vec<Span<'static>>; 4] = [
+            vec![Span::raw("   ")],
+            vec![Span::raw("   ")],
+            vec![Span::raw("   ")],
+            vec![Span::raw("   ")],
+        ];
+        for (w_idx, w) in words.iter().enumerate().take(line1_end).skip(block_start) {
+            let word_spans = render_word_slot_3x(w, w_idx, active_word_idx, cursor, statuses, slot_width);
+            l1[0].extend(word_spans[0].clone());
+            l1[1].extend(word_spans[1].clone());
+            l1[2].extend(word_spans[2].clone());
+            l1[3].extend(word_spans[3].clone());
+        }
+
+        let line2_start = line1_end;
+        let mut l2: [Vec<Span<'static>>; 4] = [
+            vec![Span::raw("   ")],
+            vec![Span::raw("   ")],
+            vec![Span::raw("   ")],
+            vec![Span::raw("   ")],
+        ];
+        if line2_start < block_end {
+            for (w_idx, w) in words.iter().enumerate().take(block_end).skip(line2_start) {
+                let word_spans = render_word_slot_3x(w, w_idx, active_word_idx, cursor, statuses, slot_width);
+                l2[0].extend(word_spans[0].clone());
+                l2[1].extend(word_spans[1].clone());
+                l2[2].extend(word_spans[2].clone());
+                l2[3].extend(word_spans[3].clone());
+            }
+        }
+
+        let mut lines = vec![
+            Line::from(""),
+            Line::from(l1[0].clone()),
+            Line::from(l1[1].clone()),
+            Line::from(l1[2].clone()),
+            Line::from(l1[3].clone()),
+            Line::from(""),
+        ];
+        if line2_start < block_end {
+            lines.push(Line::from(l2[0].clone()));
+            lines.push(Line::from(l2[1].clone()));
+            lines.push(Line::from(l2[2].clone()));
+            lines.push(Line::from(l2[3].clone()));
+            lines.push(Line::from(""));
+        }
+
+        (lines, cur_block, tot_blocks)
     } else {
-        (max_word_len + 4).max(14)
-    };
+        // Compact fallback for small screens
+        let cur_block = active_word_idx / WORDS_PER_BLOCK;
+        let tot_blocks = total_words.div_ceil(WORDS_PER_BLOCK);
+        let block_start = cur_block * WORDS_PER_BLOCK;
+        let block_end = (block_start + WORDS_PER_BLOCK).min(total_words);
+        let block_words = &words[block_start..block_end];
 
-    // Build Line 1: words from block_start to min(block_start + 4, block_end)
-    let line1_end = (block_start + WORDS_PER_LINE).min(block_end);
-    let mut line1_spans = vec![Span::raw("    ")];
-    for (w_idx, w) in words.iter().enumerate().take(line1_end).skip(block_start) {
-        line1_spans.extend(render_word_slot(
-            w,
-            w_idx,
-            active_word_idx,
-            cursor,
-            statuses,
-            slot_width,
-            is_spaced_letters,
-        ));
-    }
+        let max_word_len = block_words.iter().map(|w| w.text.chars().count()).max().unwrap_or(4);
+        let is_spaced_letters = max_word_len <= 5;
+        let slot_width = if is_spaced_letters {
+            (max_word_len * 2 + 6).max(18)
+        } else {
+            (max_word_len + 4).max(14)
+        };
 
-    // Build Line 2: words from min(block_start + 4, block_end) to block_end
-    let line2_start = (block_start + WORDS_PER_LINE).min(block_end);
-    let mut line2_spans = vec![Span::raw("    ")];
-    if line2_start < block_end {
-        for (w_idx, w) in words.iter().enumerate().take(block_end).skip(line2_start) {
-            line2_spans.extend(render_word_slot(
+        let line1_end = (block_start + WORDS_PER_LINE).min(block_end);
+        let mut line1_spans = vec![Span::raw("    ")];
+        for (w_idx, w) in words.iter().enumerate().take(line1_end).skip(block_start) {
+            line1_spans.extend(render_word_slot(
                 w,
                 w_idx,
                 active_word_idx,
@@ -300,16 +470,34 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
                 is_spaced_letters,
             ));
         }
-    }
 
-    let mut stage_lines = Vec::new();
-    stage_lines.push(Line::from(""));
-    stage_lines.push(Line::from(line1_spans));
-    stage_lines.push(Line::from(""));
-    if line2_start < block_end {
-        stage_lines.push(Line::from(line2_spans));
-        stage_lines.push(Line::from(""));
-    }
+        let line2_start = (block_start + WORDS_PER_LINE).min(block_end);
+        let mut line2_spans = vec![Span::raw("    ")];
+        if line2_start < block_end {
+            for (w_idx, w) in words.iter().enumerate().take(block_end).skip(line2_start) {
+                line2_spans.extend(render_word_slot(
+                    w,
+                    w_idx,
+                    active_word_idx,
+                    cursor,
+                    statuses,
+                    slot_width,
+                    is_spaced_letters,
+                ));
+            }
+        }
+
+        let mut lines = Vec::new();
+        lines.push(Line::from(""));
+        lines.push(Line::from(line1_spans));
+        lines.push(Line::from(""));
+        if line2_start < block_end {
+            lines.push(Line::from(line2_spans));
+            lines.push(Line::from(""));
+        }
+
+        (lines, cur_block, tot_blocks)
+    };
 
     let stage_title = format!(
         " Typing Stage  •  Block {} of {} ",
@@ -375,16 +563,31 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
     let total_chars = session.target_text.chars().count().max(1);
     let progress_ratio = (cursor as f64 / total_chars as f64).clamp(0.0, 1.0);
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(4), // Progress gauge
-            Constraint::Length(4), // Big digital clock
-            Constraint::Length(8), // Speed and accuracy metrics
-            Constraint::Length(4), // Goal badge
-            Constraint::Min(2),    // Shortcut
-        ])
-        .split(area);
+    let is_tall = area.height >= 30;
+    let chunks = if is_tall {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(4), // Progress gauge
+                Constraint::Length(4), // Big digital clock
+                Constraint::Length(8), // Speed and accuracy metrics
+                Constraint::Length(4), // Goal badge
+                Constraint::Min(4),    // Performance Cadence Insights
+                Constraint::Length(2), // Shortcut
+            ])
+            .split(area)
+    } else {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(4), // Progress gauge
+                Constraint::Length(4), // Big digital clock
+                Constraint::Length(8), // Speed and accuracy metrics
+                Constraint::Length(4), // Goal badge
+                Constraint::Min(2),    // Shortcut
+            ])
+            .split(area)
+    };
 
     // 1. Progress Gauge
     let gauge_title = format!("Progress: {:.0}% ({}/{})", progress_ratio * 100.0, cursor, total_chars);
@@ -456,11 +659,37 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
         .block(Block::default().borders(Borders::ALL).title(" Lesson Goal ").title_alignment(Alignment::Center));
     frame.render_widget(goal_p, chunks[3]);
 
-    // 5. Shortcut
-    let shortcut_p = Paragraph::new("[Esc] Cancel & Exit")
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(shortcut_p, chunks[4]);
+    // 5. Cadence Insights Card (when tall) or Shortcut Hint
+    if is_tall {
+        let cadence_lines = vec![
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Keystrokes: ", Style::default().fg(Color::Gray)),
+                Span::styled(format!("{}", cursor), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(vec![
+                Span::styled("Pace Status: ", Style::default().fg(Color::Gray)),
+                Span::styled(
+                    if metrics.net_wpm >= 30.0 { "HIGH CADENCE" } else if metrics.net_wpm >= 15.0 { "STEADY FLOW" } else { "CALIBRATING" },
+                    Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+        ];
+        let cadence_p = Paragraph::new(cadence_lines)
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL).title(" Cadence ").title_alignment(Alignment::Center));
+        frame.render_widget(cadence_p, chunks[4]);
+
+        let shortcut_p = Paragraph::new("[Esc] Cancel & Exit")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(shortcut_p, chunks[5]);
+    } else {
+        let shortcut_p = Paragraph::new("[Esc] Cancel & Exit")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::DarkGray));
+        frame.render_widget(shortcut_p, chunks[4]);
+    }
 }
 
 pub fn render_results(app: &App, frame: &mut Frame) {
@@ -559,5 +788,22 @@ mod tests {
     fn test_format_spaced() {
         assert_eq!(format_spaced("asdf"), "a s d f");
         assert_eq!(format_spaced("a"), "a");
+    }
+
+    #[test]
+    fn test_render_word_slot_3x() {
+        let word = TargetWord {
+            text: "asdf",
+            char_start: 0,
+            char_end: 4,
+            has_trailing_space: true,
+        };
+        let statuses = vec![CharStatus::Correct, CharStatus::Pending, CharStatus::Pending, CharStatus::Pending];
+        let slot = render_word_slot_3x(&word, 0, 0, 1, &statuses, 24);
+        assert_eq!(slot.len(), 4);
+        assert!(!slot[0].is_empty());
+        assert!(!slot[1].is_empty());
+        assert!(!slot[2].is_empty());
+        assert!(!slot[3].is_empty());
     }
 }

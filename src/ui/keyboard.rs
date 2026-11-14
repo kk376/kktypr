@@ -157,6 +157,167 @@ impl<'a> Widget for KeyboardWidget<'a> {
             ('/', '?', Finger::RightPinky),
         ];
 
+        let is_magnified = inner.height >= 14 && inner.width >= 75;
+
+        if is_magnified {
+            self.render_magnified(inner, buf, &row1, &row2, &row3, &row4);
+        } else {
+            self.render_compact(inner, buf, &row1, &row2, &row3, &row4);
+        }
+    }
+}
+
+impl<'a> KeyboardWidget<'a> {
+    fn render_magnified(
+        &self,
+        inner: Rect,
+        buf: &mut Buffer,
+        row1: &[ (char, char, Finger); 13 ],
+        row2: &[ (char, char, Finger); 12 ],
+        row3: &[ (char, char, Finger); 11 ],
+        row4: &[ (char, char, Finger); 10 ],
+    ) {
+        let mut lines = Vec::new();
+
+        let render_boxed_row = |chars: &[(char, char, Finger)], indent: &str| -> [Line<'static>; 3] {
+            let mut top_spans = vec![Span::raw(indent.to_string())];
+            let mut mid_spans = vec![Span::raw(indent.to_string())];
+            let mut bot_spans = vec![Span::raw(indent.to_string())];
+
+            for (idx, &(k, d, f)) in chars.iter().enumerate() {
+                if idx > 0 {
+                    top_spans.push(Span::raw(" "));
+                    mid_spans.push(Span::raw(" "));
+                    bot_spans.push(Span::raw(" "));
+                }
+
+                let is_active = self.active_char.is_some_and(|c| c.eq_ignore_ascii_case(&k));
+
+                let key_color = if let Some(hm) = self.heatmap {
+                    let acc = hm.get_accuracy(k);
+                    if acc >= 95.0 {
+                        Color::Green
+                    } else if acc >= 80.0 {
+                        Color::Yellow
+                    } else {
+                        Color::Red
+                    }
+                } else {
+                    f.color()
+                };
+
+                if is_active {
+                    top_spans.push(Span::styled("┏━━━┓", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                    mid_spans.push(Span::styled("┃", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                    mid_spans.push(Span::styled(
+                        format!(" {} ", d.to_ascii_uppercase()),
+                        Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    ));
+                    mid_spans.push(Span::styled("┃", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                    bot_spans.push(Span::styled("┗━━━┛", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+                } else {
+                    let border_style = Style::default().fg(Color::DarkGray);
+                    top_spans.push(Span::styled("╭───╮", border_style));
+                    mid_spans.push(Span::styled("│", border_style));
+                    mid_spans.push(Span::styled(
+                        format!(" {} ", d.to_ascii_uppercase()),
+                        Style::default().fg(key_color).add_modifier(Modifier::BOLD),
+                    ));
+                    mid_spans.push(Span::styled("│", border_style));
+                    bot_spans.push(Span::styled("╰───╯", border_style));
+                }
+            }
+
+            [Line::from(top_spans), Line::from(mid_spans), Line::from(bot_spans)]
+        };
+
+        // Row 1
+        for l in render_boxed_row(row1, " ") {
+            lines.push(l);
+        }
+        // Row 2
+        for l in render_boxed_row(row2, "   ") {
+            lines.push(l);
+        }
+        // Row 3
+        for l in render_boxed_row(row3, "     ") {
+            lines.push(l);
+        }
+        // Row 4
+        for l in render_boxed_row(row4, "       ") {
+            lines.push(l);
+        }
+
+        // Row 5: Magnified Spacebar
+        let is_space_active = self.active_char == Some(' ');
+        let space_indent = "                     ";
+        if is_space_active {
+            lines.push(Line::from(vec![
+                Span::raw(space_indent),
+                Span::styled("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw(space_indent),
+                Span::styled("┃", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "            SPACEBAR            ",
+                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("┃", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw(space_indent),
+                Span::styled("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]));
+        } else {
+            let space_border = Style::default().fg(Color::DarkGray);
+            lines.push(Line::from(vec![
+                Span::raw(space_indent),
+                Span::styled("╭────────────────────────────────╮", space_border),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw(space_indent),
+                Span::styled("│", space_border),
+                Span::styled(
+                    "            SPACEBAR            ",
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("│", space_border),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw(space_indent),
+                Span::styled("╰────────────────────────────────╯", space_border),
+            ]));
+        }
+
+        // Guidance line
+        if let Some(target) = self.active_char {
+            let guide = if let Some(finger) = get_finger_for_char(target) {
+                let key_disp = if target == ' ' { "SPACEBAR".to_string() } else { target.to_ascii_uppercase().to_string() };
+                format!("👉 Strike: [{}]  •  Finger: {} ", key_disp, finger.name())
+            } else {
+                format!("👉 Strike: [{}] ", target)
+            };
+            lines.push(Line::from(""));
+            lines.push(Line::from(vec![
+                Span::styled(guide, Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+            ]));
+        }
+
+        Paragraph::new(lines)
+            .alignment(Alignment::Center)
+            .render(inner, buf);
+    }
+
+    fn render_compact(
+        &self,
+        inner: Rect,
+        buf: &mut Buffer,
+        row1: &[ (char, char, Finger); 13 ],
+        row2: &[ (char, char, Finger); 12 ],
+        row3: &[ (char, char, Finger); 11 ],
+        row4: &[ (char, char, Finger); 10 ],
+    ) {
         let render_key = |key_char: char, display_char: char, finger: Finger| -> Span<'static> {
             let is_active = self.active_char.is_some_and(|c| {
                 c.eq_ignore_ascii_case(&key_char)
@@ -167,7 +328,7 @@ impl<'a> Widget for KeyboardWidget<'a> {
                     format!(" [{}] ", display_char.to_ascii_uppercase()),
                     Style::default()
                         .fg(Color::Black)
-                        .bg(Color::White)
+                        .bg(Color::Cyan)
                         .add_modifier(Modifier::BOLD),
                 )
             } else if let Some(hm) = self.heatmap {
@@ -197,7 +358,7 @@ impl<'a> Widget for KeyboardWidget<'a> {
         let mut r1_spans = Vec::new();
         r1_spans.push(Span::raw(" "));
         for (k, d, f) in row1 {
-            r1_spans.push(render_key(k, d, f));
+            r1_spans.push(render_key(*k, *d, *f));
         }
         lines.push(Line::from(r1_spans));
 
@@ -205,7 +366,7 @@ impl<'a> Widget for KeyboardWidget<'a> {
         let mut r2_spans = Vec::new();
         r2_spans.push(Span::raw("  "));
         for (k, d, f) in row2 {
-            r2_spans.push(render_key(k, d, f));
+            r2_spans.push(render_key(*k, *d, *f));
         }
         lines.push(Line::from(r2_spans));
 
@@ -213,7 +374,7 @@ impl<'a> Widget for KeyboardWidget<'a> {
         let mut r3_spans = Vec::new();
         r3_spans.push(Span::raw("    "));
         for (k, d, f) in row3 {
-            r3_spans.push(render_key(k, d, f));
+            r3_spans.push(render_key(*k, *d, *f));
         }
         lines.push(Line::from(r3_spans));
 
@@ -221,14 +382,14 @@ impl<'a> Widget for KeyboardWidget<'a> {
         let mut r4_spans = Vec::new();
         r4_spans.push(Span::raw("      "));
         for (k, d, f) in row4 {
-            r4_spans.push(render_key(k, d, f));
+            r4_spans.push(render_key(*k, *d, *f));
         }
         lines.push(Line::from(r4_spans));
 
         // Row 5: Spacebar
         let is_space_active = self.active_char == Some(' ');
         let space_style = if is_space_active {
-            Style::default().fg(Color::Black).bg(Color::White).add_modifier(Modifier::BOLD)
+            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::Yellow)
         };
@@ -241,7 +402,7 @@ impl<'a> Widget for KeyboardWidget<'a> {
         // Guidance line
         if let Some(target) = self.active_char {
             let guide = if let Some(finger) = get_finger_for_char(target) {
-                let key_disp = if target == ' ' { "SPACE".to_string() } else { target.to_string() };
+                let key_disp = if target == ' ' { "SPACEBAR".to_string() } else { target.to_ascii_uppercase().to_string() };
                 format!("👉 Target: [{}]  |  Finger: {} ", key_disp, finger.name())
             } else {
                 format!("👉 Target: [{}] ", target)
