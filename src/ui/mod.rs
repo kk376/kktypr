@@ -1,4 +1,3 @@
-pub mod font3x;
 pub mod keyboard;
 pub mod theme;
 pub mod views;

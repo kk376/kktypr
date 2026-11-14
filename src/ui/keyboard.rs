@@ -248,16 +248,13 @@ impl<'a> KeyboardWidget<'a> {
             lines.push(l);
         }
 
-        // Row 5: Magnified Spacebar
+        // Row 5: Magnified Spacebar (Centered horizontally)
         let is_space_active = self.active_char == Some(' ');
-        let space_indent = "                     ";
         if is_space_active {
             lines.push(Line::from(vec![
-                Span::raw(space_indent),
                 Span::styled("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]));
             lines.push(Line::from(vec![
-                Span::raw(space_indent),
                 Span::styled("┃", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::styled(
                     "            SPACEBAR            ",
@@ -266,17 +263,14 @@ impl<'a> KeyboardWidget<'a> {
                 Span::styled("┃", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]));
             lines.push(Line::from(vec![
-                Span::raw(space_indent),
                 Span::styled("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]));
         } else {
             let space_border = Style::default().fg(Color::DarkGray);
             lines.push(Line::from(vec![
-                Span::raw(space_indent),
                 Span::styled("╭────────────────────────────────╮", space_border),
             ]));
             lines.push(Line::from(vec![
-                Span::raw(space_indent),
                 Span::styled("│", space_border),
                 Span::styled(
                     "            SPACEBAR            ",
@@ -285,7 +279,6 @@ impl<'a> KeyboardWidget<'a> {
                 Span::styled("│", space_border),
             ]));
             lines.push(Line::from(vec![
-                Span::raw(space_indent),
                 Span::styled("╰────────────────────────────────╯", space_border),
             ]));
         }
@@ -394,7 +387,6 @@ impl<'a> KeyboardWidget<'a> {
             Style::default().fg(Color::Yellow)
         };
         let r5_spans = vec![
-            Span::raw("             "),
             Span::styled("[                SPACEBAR                ]", space_style),
         ];
         lines.push(Line::from(r5_spans));
@@ -402,7 +394,7 @@ impl<'a> KeyboardWidget<'a> {
         // Guidance line
         if let Some(target) = self.active_char {
             let guide = if let Some(finger) = get_finger_for_char(target) {
-                let key_disp = if target == ' ' { "SPACEBAR".to_string() } else { target.to_ascii_uppercase().to_string() };
+                let key_disp = if target == ' ' { "SPACEBAR".to_string() } else { target.to_string() };
                 format!("👉 Target: [{}]  |  Finger: {} ", key_disp, finger.name())
             } else {
                 format!("👉 Target: [{}] ", target)
