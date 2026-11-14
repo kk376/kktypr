@@ -1,13 +1,13 @@
+use crate::app::App;
+use crate::game::word_drop::GameState;
+use crate::ui::theme::Theme;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
-use crate::app::App;
-use crate::game::word_drop::GameState;
-use crate::ui::theme::Theme;
 
 pub fn render_word_drop(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
@@ -30,29 +30,43 @@ pub fn render_word_drop(app: &App, frame: &mut Frame) {
     let multiplier = 1 + game.streak / 5;
     let hud_line = Line::from(vec![
         Span::styled(" Score: ", Style::default().fg(Color::Gray)),
-        Span::styled(format!("{} ", game.score), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("{} ", game.score),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(" | "),
         Span::styled(" Streak: ", Style::default().fg(Color::Gray)),
-        Span::styled(format!("{}x (x{}) ", game.streak, multiplier), Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("{}x (x{}) ", game.streak, multiplier),
+            Style::default()
+                .fg(Theme::ACCENT)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(" | "),
         Span::styled(" Lives: ", Style::default().fg(Color::Gray)),
-        Span::styled(hearts, Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            hearts,
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
         Span::raw(" | "),
         Span::styled(" High Score: ", Style::default().fg(Color::Gray)),
-        Span::styled(format!("{} ", app.profile.game_high_score), Style::default().fg(Color::Magenta)),
+        Span::styled(
+            format!("{} ", app.profile.game_high_score),
+            Style::default().fg(Color::Magenta),
+        ),
         Span::raw(" | "),
         Span::styled(" Esc: Exit ", Style::default().fg(Color::DarkGray)),
     ]);
 
-    let hud = Paragraph::new(hud_line)
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Word Drop Arcade (Typing Bubbles TUI) ")
-                .title_alignment(Alignment::Center)
-                .border_style(Style::default().fg(Color::Magenta)),
-        );
+    let hud = Paragraph::new(hud_line).alignment(Alignment::Center).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Word Drop Arcade (Typing Bubbles TUI) ")
+            .title_alignment(Alignment::Center)
+            .border_style(Style::default().fg(Color::Magenta)),
+    );
     frame.render_widget(hud, chunks[0]);
 
     // 2. Playfield
@@ -65,17 +79,47 @@ pub fn render_word_drop(app: &App, frame: &mut Frame) {
     if game.state == GameState::GameOver {
         let game_over_text = vec![
             Line::from(""),
-            Line::from(Span::styled("  ██████╗  █████╗ ███╗   ███╗███████╗   ██████╗ ██╗   ██╗███████╗██████╗  ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))),
-            Line::from(Span::styled(" ██╔════╝ ██╔══██╗████╗ ████║██╔════╝  ██╔═══██╗██║   ██║██╔════╝██╔══██╗ ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))),
-            Line::from(Span::styled(" ██║  ███╗███████║██╔████╔██║█████╗    ██║   ██║██║   ██║█████╗  ██████╔╝ ", Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD))),
-            Line::from(Span::styled(" ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗ ", Style::default().fg(Color::LightRed))),
-            Line::from(Span::styled(" ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗  ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ", Style::default().fg(Color::DarkGray))),
+            Line::from(Span::styled(
+                "  ██████╗  █████╗ ███╗   ███╗███████╗   ██████╗ ██╗   ██╗███████╗██████╗  ",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            )),
+            Line::from(Span::styled(
+                " ██╔════╝ ██╔══██╗████╗ ████║██╔════╝  ██╔═══██╗██║   ██║██╔════╝██╔══██╗ ",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            )),
+            Line::from(Span::styled(
+                " ██║  ███╗███████║██╔████╔██║█████╗    ██║   ██║██║   ██║█████╗  ██████╔╝ ",
+                Style::default()
+                    .fg(Color::LightRed)
+                    .add_modifier(Modifier::BOLD),
+            )),
+            Line::from(Span::styled(
+                " ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝    ██║   ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗ ",
+                Style::default().fg(Color::LightRed),
+            )),
+            Line::from(Span::styled(
+                " ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗  ╚██████╔╝ ╚████╔╝ ███████╗██║  ██║ ",
+                Style::default().fg(Color::DarkGray),
+            )),
             Line::from(""),
-            Line::from(Span::styled(format!("Final Score: {}", game.score), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                format!("Final Score: {}", game.score),
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Press [r] to Play Again  ", Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD)),
-                Span::styled("|  [q / Esc] Quit to Main Menu", Style::default().fg(Color::Gray)),
+                Span::styled(
+                    "Press [r] to Play Again  ",
+                    Style::default()
+                        .fg(Theme::SUCCESS)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "|  [q / Esc] Quit to Main Menu",
+                    Style::default().fg(Color::Gray),
+                ),
             ]),
         ];
         let p = Paragraph::new(game_over_text).alignment(Alignment::Center);
@@ -88,7 +132,11 @@ pub fn render_word_drop(app: &App, frame: &mut Frame) {
             if row < playfield_area.bottom() {
                 let start_col = playfield_area.left() + word.x;
                 let is_targeted = game.targeted_word_idx == Some(idx);
-                let bubble_bg = if is_targeted { Color::Yellow } else { Color::Cyan };
+                let bubble_bg = if is_targeted {
+                    Color::Yellow
+                } else {
+                    Color::Cyan
+                };
 
                 // Left capsule padding
                 if start_col > playfield_area.left()
@@ -101,11 +149,20 @@ pub fn render_word_drop(app: &App, frame: &mut Frame) {
                     let col = start_col + char_idx as u16;
                     if col < playfield_area.right() {
                         let style = if char_idx < word.typed_len {
-                            Style::default().fg(Color::White).bg(Theme::SUCCESS).add_modifier(Modifier::BOLD)
+                            Style::default()
+                                .fg(Color::White)
+                                .bg(Theme::SUCCESS)
+                                .add_modifier(Modifier::BOLD)
                         } else if is_targeted {
-                            Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD)
+                            Style::default()
+                                .fg(Color::Black)
+                                .bg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD)
                         } else {
-                            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+                            Style::default()
+                                .fg(Color::Black)
+                                .bg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD)
                         };
 
                         if let Some(cell) = buf.cell_mut((col, row)) {

@@ -35,7 +35,10 @@ impl Theme {
     }
 
     pub fn incorrect_char() -> Style {
-        Style::default().fg(Color::White).bg(Self::ERROR).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::White)
+            .bg(Self::ERROR)
+            .add_modifier(Modifier::BOLD)
     }
 
     pub fn pending_char() -> Style {
@@ -43,7 +46,10 @@ impl Theme {
     }
 
     pub fn active_cursor_char() -> Style {
-        Style::default().fg(Color::Black).bg(Color::White).add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+        Style::default()
+            .fg(Color::Black)
+            .bg(Color::White)
+            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
     }
 
     pub fn finger_style(finger_idx: usize) -> Style {

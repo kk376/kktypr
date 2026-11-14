@@ -4,15 +4,15 @@ mod engine;
 mod game;
 mod ui;
 
-use std::io::{self, stdout};
-use std::time::{Duration, Instant};
+use crate::app::App;
 use crossterm::{
     event::{self, Event, KeyEventKind},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
-use crate::app::App;
+use ratatui::{Terminal, backend::CrosstermBackend};
+use std::io::{self, stdout};
+use std::time::{Duration, Instant};
 
 fn main() -> io::Result<()> {
     // Setup clean terminal panic hook
@@ -40,9 +40,10 @@ fn main() -> io::Result<()> {
         let timeout = tick_rate.saturating_sub(last_tick.elapsed());
         if event::poll(timeout)?
             && let Event::Key(key) = event::read()?
-                && key.kind == KeyEventKind::Press {
-                    app.handle_key_event(key);
-                }
+            && key.kind == KeyEventKind::Press
+        {
+            app.handle_key_event(key);
+        }
 
         if last_tick.elapsed() >= tick_rate {
             app.on_tick();

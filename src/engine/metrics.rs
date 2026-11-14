@@ -50,7 +50,7 @@ impl TypingMetrics {
 
         let elapsed_minutes = elapsed.as_secs_f64() / 60.0;
         let gross_wpm = (total_keystrokes as f64 / 5.0) / elapsed_minutes;
-        
+
         let net_chars = (correct_keystrokes as f64 / 5.0) - (error_count as f64);
         let net_wpm = (net_chars / elapsed_minutes).max(0.0);
 

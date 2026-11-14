@@ -1,10 +1,9 @@
-use std::time::{Duration, Instant};
 use rand::RngExt;
+use std::time::{Duration, Instant};
 
 const WORD_BANK: &[&str] = &[
-    "rust", "code", "fast", "pure", "safe", "drop", "flow", "core",
-    "grid", "byte", "loop", "type", "beam", "star", "neon", "zero",
-    "async", "trait", "mutex", "spawn", "slice", "macro", "crate",
+    "rust", "code", "fast", "pure", "safe", "drop", "flow", "core", "grid", "byte", "loop", "type",
+    "beam", "star", "neon", "zero", "async", "trait", "mutex", "spawn", "slice", "macro", "crate",
     "stack", "logic", "event", "pixel", "cache", "token", "guard",
 ];
 
@@ -91,7 +90,9 @@ impl WordDropGame {
         }
 
         let now = Instant::now();
-        let dt = now.saturating_duration_since(self.last_update).as_secs_f32();
+        let dt = now
+            .saturating_duration_since(self.last_update)
+            .as_secs_f32();
         self.last_update = now;
 
         // Periodic word spawning
@@ -119,7 +120,7 @@ impl WordDropGame {
             let prev_len = self.words.len();
             self.words.retain(|w| w.y < floor);
             let lost_count = prev_len - self.words.len();
-            
+
             self.streak = 0;
             self.targeted_word_idx = None;
             self.lives = self.lives.saturating_sub(lost_count as u8);
@@ -140,18 +141,19 @@ impl WordDropGame {
             if target_idx < self.words.len() {
                 let word = &mut self.words[target_idx];
                 if let Some(expected) = word.text.chars().nth(word.typed_len)
-                    && expected == c {
-                        word.typed_len += 1;
-                        if word.typed_len >= word.text.len() {
-                            // Word completed!
-                            let pts = (word.text.len() as u32 * 10) * (1 + self.streak / 5);
-                            self.score += pts;
-                            self.streak += 1;
-                            self.words.remove(target_idx);
-                            self.targeted_word_idx = None;
-                        }
-                        return true;
+                    && expected == c
+                {
+                    word.typed_len += 1;
+                    if word.typed_len >= word.text.len() {
+                        // Word completed!
+                        let pts = (word.text.len() as u32 * 10) * (1 + self.streak / 5);
+                        self.score += pts;
+                        self.streak += 1;
+                        self.words.remove(target_idx);
+                        self.targeted_word_idx = None;
                     }
+                    return true;
+                }
             }
             // Mismatch resets streak and target
             self.streak = 0;

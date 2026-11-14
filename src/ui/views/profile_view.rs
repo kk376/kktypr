@@ -1,12 +1,12 @@
+use crate::app::App;
+use crate::ui::theme::Theme;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
-    Frame,
 };
-use crate::app::App;
-use crate::ui::theme::Theme;
 
 pub fn render_profile_manager(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
@@ -20,12 +20,16 @@ pub fn render_profile_manager(app: &App, frame: &mut Frame) {
 
     // 1. Header
     let header_lines = vec![
-        Line::from(vec![
-            Span::styled("TYPIST PROFILE MANAGER", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("Switch between typists, create new training profiles, or rename existing accounts.", Style::default().fg(Color::Gray)),
-        ]),
+        Line::from(vec![Span::styled(
+            "TYPIST PROFILE MANAGER",
+            Style::default()
+                .fg(Theme::ACCENT)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "Switch between typists, create new training profiles, or rename existing accounts.",
+            Style::default().fg(Color::Gray),
+        )]),
     ];
     let header = Paragraph::new(header_lines)
         .alignment(Alignment::Center)
@@ -87,7 +91,10 @@ pub fn render_profile_manager(app: &App, frame: &mut Frame) {
     let list_title = if let Some(ref note) = app.status_notification {
         format!(" ✓ {} ", note)
     } else {
-        format!(" Profiles ({} Registered) ", app.profile_store.profiles.len())
+        format!(
+            " Profiles ({} Registered) ",
+            app.profile_store.profiles.len()
+        )
     };
 
     let list_block = Block::default()
@@ -100,20 +107,36 @@ pub fn render_profile_manager(app: &App, frame: &mut Frame) {
     frame.render_widget(list_widget, chunks[1]);
 
     // 3. Actions / Footer
-    let actions_lines = vec![
-        Line::from(vec![
-            Span::styled("[Enter] ", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-            Span::raw("Switch Profile   |   "),
-            Span::styled("[a] ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            Span::raw("Add New   |   "),
-            Span::styled("[r] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::raw("Rename   |   "),
-            Span::styled("[d] ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-            Span::raw("Delete   |   "),
-            Span::styled("[Esc/q] ", Style::default().fg(Color::Cyan)),
-            Span::raw("Main Menu"),
-        ]),
-    ];
+    let actions_lines = vec![Line::from(vec![
+        Span::styled(
+            "[Enter] ",
+            Style::default()
+                .fg(Theme::ACCENT)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("Switch Profile   |   "),
+        Span::styled(
+            "[a] ",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("Add New   |   "),
+        Span::styled(
+            "[r] ",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("Rename   |   "),
+        Span::styled(
+            "[d] ",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("Delete   |   "),
+        Span::styled("[Esc/q] ", Style::default().fg(Color::Cyan)),
+        Span::raw("Main Menu"),
+    ])];
     let footer = Paragraph::new(actions_lines)
         .alignment(Alignment::Center)
         .block(

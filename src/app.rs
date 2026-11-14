@@ -1,11 +1,11 @@
-use std::time::Duration;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crate::analytics::profile::{ProfileStore, UserProfile};
 use crate::analytics::targeted::TargetedDrillGenerator;
 use crate::engine::curriculum::{Course, Exercise};
 use crate::engine::metrics::TypingMetrics;
 use crate::engine::session::TypingSession;
 use crate::game::word_drop::WordDropGame;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppScreen {
@@ -64,10 +64,7 @@ impl App {
         let profile_store = ProfileStore::load_or_default();
         let profile = profile_store.active().clone();
         let is_first_run = profile_store.is_first_run;
-        let courses = vec![
-            Course::touch_typing_basics(),
-            Course::developer_special(),
-        ];
+        let courses = vec![Course::touch_typing_basics(), Course::developer_special()];
 
         let name_prompt = if is_first_run {
             Some(NamePromptState {
@@ -115,7 +112,9 @@ impl App {
     pub fn navigate_to_mode(&mut self, target: AppScreen) {
         if self.needs_name_prompt_on_next_mode {
             self.name_prompt = Some(NamePromptState {
-                purpose: NamePromptPurpose::AfterReset { pending_screen: target },
+                purpose: NamePromptPurpose::AfterReset {
+                    pending_screen: target,
+                },
                 input: String::new(),
                 error_msg: None,
             });
@@ -141,7 +140,10 @@ impl App {
         let course = self.current_course();
         if let Some(lesson) = course.lessons.get(lesson_idx) {
             for (idx, _) in lesson.exercises.iter().enumerate() {
-                if !self.profile.is_exercise_completed(&course.id, lesson.number, idx) {
+                if !self
+                    .profile
+                    .is_exercise_completed(&course.id, lesson.number, idx)
+                {
                     return idx;
                 }
             }
@@ -201,32 +203,36 @@ impl App {
             }
         } else if self.screen == AppScreen::TypingActive
             && let Some(ref session) = self.active_session
-                && session.is_finished() {
-                    self.finish_active_session();
-                }
+            && session.is_finished()
+        {
+            self.finish_active_session();
+        }
     }
 
     pub fn finish_active_session(&mut self) {
         if let Some(session) = self.active_session.take() {
             let metrics = session.current_metrics();
-            
+
             // Record keystrokes into user heatmap
             for k in session.keystrokes() {
                 self.profile.heatmap.record(k.expected, k.is_correct);
             }
 
             // Record completion if in course mode and accuracy threshold met
-            if self.session_origin == AppScreen::LessonSelect && self.selected_course_idx < self.courses.len() {
+            if self.session_origin == AppScreen::LessonSelect
+                && self.selected_course_idx < self.courses.len()
+            {
                 let course_id = self.current_course().id.clone();
                 if let Some(ex) = self.current_exercise()
-                    && metrics.accuracy_pct >= ex.minimum_accuracy {
-                        self.profile.record_exercise_completion(
-                            &course_id,
-                            self.selected_lesson_idx + 1,
-                            self.selected_exercise_idx,
-                            &metrics,
-                        );
-                    }
+                    && metrics.accuracy_pct >= ex.minimum_accuracy
+                {
+                    self.profile.record_exercise_completion(
+                        &course_id,
+                        self.selected_lesson_idx + 1,
+                        self.selected_exercise_idx,
+                        &metrics,
+                    );
+                }
             } else {
                 self.profile.record_session_metrics(&metrics);
             }
@@ -290,7 +296,9 @@ impl App {
                 self.name_prompt = Some(prompt);
             }
             KeyCode::Char(c) => {
-                if prompt.input.len() < 24 && (c.is_alphanumeric() || c == ' ' || c == '_' || c == '-') {
+                if prompt.input.len() < 24
+                    && (c.is_alphanumeric() || c == ' ' || c == '_' || c == '-')
+                {
                     prompt.input.push(c);
                     prompt.error_msg = None;
                 }
@@ -300,17 +308,27 @@ impl App {
                 let name = prompt.input.trim().to_string();
                 match prompt.purpose {
                     NamePromptPurpose::FirstRun => {
-                        let final_name = if name.is_empty() { "Typist".to_string() } else { name };
+                        let final_name = if name.is_empty() {
+                            "Typist".to_string()
+                        } else {
+                            name
+                        };
                         self.profile.name = final_name;
                         self.sync_and_save_profile();
-                        self.status_notification = Some(format!("Profile registered for '{}'.", self.profile.name));
+                        self.status_notification =
+                            Some(format!("Profile registered for '{}'.", self.profile.name));
                     }
                     NamePromptPurpose::AfterReset { pending_screen } => {
-                        let final_name = if name.is_empty() { "Typist".to_string() } else { name };
+                        let final_name = if name.is_empty() {
+                            "Typist".to_string()
+                        } else {
+                            name
+                        };
                         self.profile.name = final_name;
                         self.needs_name_prompt_on_next_mode = false;
                         self.sync_and_save_profile();
-                        self.status_notification = Some(format!("Typist set to '{}'.", self.profile.name));
+                        self.status_notification =
+                            Some(format!("Typist set to '{}'.", self.profile.name));
                         self.screen = pending_screen;
                     }
                     NamePromptPurpose::RenameProfile { ref old_name } => {
@@ -323,7 +341,8 @@ impl App {
                             Ok(()) => {
                                 self.sync_active_from_store();
                                 let _ = self.profile_store.save();
-                                self.status_notification = Some(format!("Renamed profile to '{}'.", name));
+                                self.status_notification =
+                                    Some(format!("Renamed profile to '{}'.", name));
                             }
                             Err(e) => {
                                 prompt.error_msg = Some(e.to_string());
@@ -341,8 +360,10 @@ impl App {
                             Ok(()) => {
                                 self.sync_active_from_store();
                                 let _ = self.profile_store.save();
-                                self.selected_profile_idx = self.profile_store.profiles.len().saturating_sub(1);
-                                self.status_notification = Some(format!("Created profile '{}'.", name));
+                                self.selected_profile_idx =
+                                    self.profile_store.profiles.len().saturating_sub(1);
+                                self.status_notification =
+                                    Some(format!("Created profile '{}'.", name));
                             }
                             Err(e) => {
                                 prompt.error_msg = Some(e.to_string());
@@ -366,7 +387,10 @@ impl App {
                     self.sync_and_save_profile();
                     self.confirm_reset_stats = false;
                     self.needs_name_prompt_on_next_mode = true;
-                    self.status_notification = Some("Stats reset. You will be prompted for your name on your next exercise.".to_string());
+                    self.status_notification = Some(
+                        "Stats reset. You will be prompted for your name on your next exercise."
+                            .to_string(),
+                    );
                 }
                 KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
                     self.confirm_reset_stats = false;
@@ -446,7 +470,8 @@ impl App {
                     self.profile_store.switch_profile(&target_name);
                     self.sync_active_from_store();
                     let _ = self.profile_store.save();
-                    self.status_notification = Some(format!("Switched to profile '{}'.", target_name));
+                    self.status_notification =
+                        Some(format!("Switched to profile '{}'.", target_name));
                 }
             }
             KeyCode::Char('a') => {
@@ -476,7 +501,8 @@ impl App {
                             self.selected_profile_idx = self
                                 .selected_profile_idx
                                 .min(self.profile_store.profiles.len().saturating_sub(1));
-                            self.status_notification = Some(format!("Profile '{}' deleted.", name_to_del));
+                            self.status_notification =
+                                Some(format!("Profile '{}' deleted.", name_to_del));
                         }
                         Err(e) => {
                             self.status_notification = Some(format!("Cannot delete: {}", e));
@@ -508,7 +534,9 @@ impl App {
                 self.selected_exercise_idx = self.default_exercise_idx_for_lesson(0);
                 self.screen = AppScreen::LessonSelect;
             }
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => {
+                self.screen = AppScreen::MainMenu
+            }
             _ => {}
         }
     }
@@ -526,13 +554,15 @@ impl App {
             KeyCode::Up | KeyCode::Char('k') => {
                 if self.selected_lesson_idx > 0 {
                     self.selected_lesson_idx -= 1;
-                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                    self.selected_exercise_idx =
+                        self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
                 }
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 if self.selected_lesson_idx + 1 < total_lessons {
                     self.selected_lesson_idx += 1;
-                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                    self.selected_exercise_idx =
+                        self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
                 }
             }
             KeyCode::Left | KeyCode::Char('h') | KeyCode::BackTab => {
@@ -583,32 +613,33 @@ impl App {
 
     fn handle_results_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Char('r') | KeyCode::Char('R') => {
-                match self.session_origin {
-                    AppScreen::LessonSelect => self.start_current_exercise(),
-                    AppScreen::SpeedTestSelect => self.start_speed_test(self.last_speed_test_secs),
-                    AppScreen::TargetedReview => self.start_targeted_drill(),
-                    _ => self.start_current_exercise(),
-                }
-            }
+            KeyCode::Char('r') | KeyCode::Char('R') => match self.session_origin {
+                AppScreen::LessonSelect => self.start_current_exercise(),
+                AppScreen::SpeedTestSelect => self.start_speed_test(self.last_speed_test_secs),
+                AppScreen::TargetedReview => self.start_targeted_drill(),
+                _ => self.start_current_exercise(),
+            },
             KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Enter => {
                 match self.session_origin {
                     AppScreen::LessonSelect => {
                         // Advance to next exercise or lesson
                         if let Some(course) = self.courses.get(self.selected_course_idx)
-                            && let Some(lesson) = course.lessons.get(self.selected_lesson_idx) {
-                                if self.selected_exercise_idx + 1 < lesson.exercises.len() {
-                                    self.selected_exercise_idx += 1;
-                                    self.start_current_exercise();
-                                } else if self.selected_lesson_idx + 1 < course.lessons.len() {
-                                    self.selected_lesson_idx += 1;
-                                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
-                                    self.start_current_exercise();
-                                } else {
-                                    self.screen = AppScreen::LessonSelect;
-                                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
-                                }
+                            && let Some(lesson) = course.lessons.get(self.selected_lesson_idx)
+                        {
+                            if self.selected_exercise_idx + 1 < lesson.exercises.len() {
+                                self.selected_exercise_idx += 1;
+                                self.start_current_exercise();
+                            } else if self.selected_lesson_idx + 1 < course.lessons.len() {
+                                self.selected_lesson_idx += 1;
+                                self.selected_exercise_idx =
+                                    self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                                self.start_current_exercise();
+                            } else {
+                                self.screen = AppScreen::LessonSelect;
+                                self.selected_exercise_idx =
+                                    self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
                             }
+                        }
                     }
                     _ => {
                         self.screen = self.session_origin;
@@ -618,7 +649,8 @@ impl App {
             KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => {
                 self.screen = self.session_origin;
                 if self.screen == AppScreen::LessonSelect {
-                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                    self.selected_exercise_idx =
+                        self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
                 }
             }
             KeyCode::Char('m') => {
@@ -660,7 +692,9 @@ impl App {
                 self.selected_speed_test_idx = 2;
                 self.start_speed_test(300);
             }
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => {
+                self.screen = AppScreen::MainMenu
+            }
             _ => {}
         }
     }
@@ -670,7 +704,9 @@ impl App {
             KeyCode::Enter | KeyCode::Char('p') | KeyCode::Char('l') => {
                 self.start_targeted_drill();
             }
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => {
+                self.screen = AppScreen::MainMenu
+            }
             _ => {}
         }
     }
@@ -695,7 +731,9 @@ impl App {
 
     fn handle_stats_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') | KeyCode::Enter => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') | KeyCode::Enter => {
+                self.screen = AppScreen::MainMenu
+            }
             _ => {}
         }
     }
@@ -721,7 +759,9 @@ mod tests {
         app.name_prompt = None;
         app.profile.best_gross_wpm = 75.0;
         app.profile.total_sessions = 10;
-        app.profile.completed_exercises.insert("basics:1:0".to_string());
+        app.profile
+            .completed_exercises
+            .insert("basics:1:0".to_string());
 
         // Press 'r' in main menu triggers confirmation
         app.handle_key_event(key(KeyCode::Char('r')));
@@ -876,7 +916,7 @@ mod tests {
     fn test_app_key_drill_vs_prose_mode_resolution() {
         let mut app = App::new();
 
-        // 1. In Lesson 1 Exercise 0 (Home Row Warm-Up): should be key drill
+        // 1. In Lesson 1 Exercise 0 (Home Row Warm Up): should be key drill
         app.selected_course_idx = 0;
         app.selected_lesson_idx = 0;
         app.selected_exercise_idx = 0;
@@ -913,17 +953,21 @@ mod tests {
 
         let metrics = crate::engine::metrics::TypingMetrics::default();
         // Complete step 1 (idx 0)
-        app.profile.record_exercise_completion(&course_id, 12, 0, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 0, &metrics);
         assert_eq!(app.default_exercise_idx_for_lesson(lesson_12_idx), 1);
 
         // Complete step 2 (idx 1) and step 3 (idx 2)
-        app.profile.record_exercise_completion(&course_id, 12, 1, &metrics);
-        app.profile.record_exercise_completion(&course_id, 12, 2, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 1, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 2, &metrics);
         // With 3 steps completed, step 4 (idx 3) must be the default
         assert_eq!(app.default_exercise_idx_for_lesson(lesson_12_idx), 3);
 
         // Complete step 4 (idx 3) -> All completed, resets to step 1 (idx 0)
-        app.profile.record_exercise_completion(&course_id, 12, 3, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 3, &metrics);
         assert_eq!(app.default_exercise_idx_for_lesson(lesson_12_idx), 0);
     }
 
@@ -936,9 +980,12 @@ mod tests {
 
         let metrics = crate::engine::metrics::TypingMetrics::default();
         // Complete 3 steps in Lesson 12
-        app.profile.record_exercise_completion(&course_id, 12, 0, &metrics);
-        app.profile.record_exercise_completion(&course_id, 12, 1, &metrics);
-        app.profile.record_exercise_completion(&course_id, 12, 2, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 0, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 1, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 2, &metrics);
 
         // Enter LessonSelect and highlight Lesson 12
         app.screen = AppScreen::LessonSelect;
@@ -986,9 +1033,12 @@ mod tests {
 
         let metrics = crate::engine::metrics::TypingMetrics::default();
         // Complete 3 steps in Lesson 12
-        app.profile.record_exercise_completion(&course_id, 12, 0, &metrics);
-        app.profile.record_exercise_completion(&course_id, 12, 1, &metrics);
-        app.profile.record_exercise_completion(&course_id, 12, 2, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 0, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 1, &metrics);
+        app.profile
+            .record_exercise_completion(&course_id, 12, 2, &metrics);
 
         app.screen = AppScreen::LessonSelect;
         app.selected_lesson_idx = 11; // Lesson 12

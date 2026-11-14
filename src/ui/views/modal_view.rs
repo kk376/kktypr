@@ -1,12 +1,12 @@
+use crate::app::{NamePromptPurpose, NamePromptState};
+use crate::ui::theme::Theme;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
-    Frame,
 };
-use crate::app::{NamePromptPurpose, NamePromptState};
-use crate::ui::theme::Theme;
 
 pub fn render_name_prompt_modal(prompt: &NamePromptState, frame: &mut Frame) {
     let area = frame.area();
@@ -68,7 +68,12 @@ pub fn render_name_prompt_modal(prompt: &NamePromptState, frame: &mut Frame) {
     // 2. High-contrast Input Field Box
     let display_input = format!("{}_", prompt.input);
     let input_line = Line::from(vec![
-        Span::styled(" ▶ ", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " ▶ ",
+            Style::default()
+                .fg(Theme::ACCENT)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(
             format!(" {:<28} ", display_input),
             Style::default()
@@ -83,7 +88,11 @@ pub fn render_name_prompt_modal(prompt: &NamePromptState, frame: &mut Frame) {
     // 3. Error message or blank
     if let Some(ref err) = prompt.error_msg {
         let err_p = Paragraph::new(format!("⚠️ {}", err))
-            .style(Style::default().fg(Color::LightRed).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::LightRed)
+                    .add_modifier(Modifier::BOLD),
+            )
             .alignment(Alignment::Center);
         frame.render_widget(err_p, rows[3]);
     }

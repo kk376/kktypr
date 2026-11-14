@@ -1,12 +1,12 @@
+use crate::app::App;
+use crate::ui::theme::Theme;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
-    Frame,
 };
-use crate::app::App;
-use crate::ui::theme::Theme;
 
 pub fn render_main_menu(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
@@ -20,12 +20,16 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
 
     // Clean, modern header box (no font-glitching double-width blocks)
     let header_lines = vec![
-        Line::from(vec![
-            Span::styled("K K T Y P R", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("Terminal Touch-Typing Academy  •  Rust 2024 Edition", Style::default().fg(Color::Gray)),
-        ]),
+        Line::from(vec![Span::styled(
+            "K K T Y P R",
+            Style::default()
+                .fg(Theme::ACCENT)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "Terminal Touch Typing Academy",
+            Style::default().fg(Color::Gray),
+        )]),
     ];
     let header = Paragraph::new(header_lines)
         .alignment(Alignment::Center)
@@ -40,7 +44,7 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
     let menu_items = [
         "1. Touch Typing Academy (12 Lessons)",
         "2. Speed Tests (1m, 2m, 5m)",
-        "3. Weak-Key Diagnostics & Targeted Review",
+        "3. Weak Key Diagnostics & Targeted Review",
         "4. Word Drop Arcade Game",
         "5. Typist Profile & Heatmap",
         "6. Typist Profile Manager (Switch, Add, Rename)",
@@ -115,27 +119,55 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
     let footer_text = vec![
         Line::from(vec![
             Span::styled("Typist: ", Style::default().fg(Color::Gray)),
-            Span::styled(&app.profile.name, Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                &app.profile.name,
+                Style::default()
+                    .fg(Theme::ACCENT)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw("   |   "),
             Span::styled("Best Gross: ", Style::default().fg(Color::Gray)),
-            Span::styled(format!("{:.1} WPM", app.profile.best_gross_wpm), Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{:.1} WPM", app.profile.best_gross_wpm),
+                Style::default()
+                    .fg(Theme::SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw("   |   "),
             Span::styled("Best Net: ", Style::default().fg(Color::Gray)),
-            Span::styled(format!("{:.1} WPM", app.profile.best_net_wpm), Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{:.1} WPM", app.profile.best_net_wpm),
+                Style::default()
+                    .fg(Theme::SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw("   |   "),
             Span::styled("Completed: ", Style::default().fg(Color::Gray)),
-            Span::styled(format!("{} drills", app.profile.completed_exercises.len()), Style::default().fg(Color::Yellow)),
+            Span::styled(
+                format!("{} drills", app.profile.completed_exercises.len()),
+                Style::default().fg(Color::Yellow),
+            ),
             Span::raw("   |   "),
             Span::styled("Arcade Record: ", Style::default().fg(Color::Gray)),
-            Span::styled(format!("{}", app.profile.game_high_score), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{}", app.profile.game_high_score),
+                Style::default()
+                    .fg(Color::Magenta)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]),
-        Line::from(vec![
-            Span::styled("Focus on accuracy first. Speed emerges naturally from effortless rhythm.", Style::default().fg(Color::DarkGray)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Focus on accuracy first. Speed emerges naturally from effortless rhythm.",
+            Style::default().fg(Color::DarkGray),
+        )]),
     ];
     let footer = Paragraph::new(footer_text)
         .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::TOP).border_style(Style::default().fg(Color::DarkGray)));
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(Color::DarkGray)),
+        );
     frame.render_widget(footer, chunks[2]);
 }
 
@@ -152,7 +184,13 @@ pub fn render_course_select(app: &App, frame: &mut Frame) {
         .map(|(idx, course)| {
             let is_selected = idx == app.selected_course_idx;
             let (prefix, style) = if is_selected {
-                ("  ▶  ", Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD))
+                (
+                    "  ▶  ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Theme::ACCENT)
+                        .add_modifier(Modifier::BOLD),
+                )
             } else {
                 ("     ", Style::default().fg(Color::White))
             };
@@ -173,9 +211,10 @@ pub fn render_course_select(app: &App, frame: &mut Frame) {
 
     frame.render_widget(List::new(items).block(block), chunks[0]);
 
-    let help = Paragraph::new("Press Enter to view course curriculum  |  Esc to return to Main Menu")
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(Color::DarkGray));
+    let help =
+        Paragraph::new("Press Enter to view course curriculum  |  Esc to return to Main Menu")
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::DarkGray));
     frame.render_widget(help, chunks[1]);
 }
 
@@ -201,42 +240,60 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
         .map(|(idx, lesson)| {
             let is_selected = idx == app.selected_lesson_idx;
             let (prefix, style) = if is_selected {
-                ("  ▶  ", Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD))
+                (
+                    "  ▶  ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Theme::ACCENT)
+                        .add_modifier(Modifier::BOLD),
+                )
             } else {
                 ("     ", Style::default().fg(Color::White))
             };
 
             let mut exercise_tags = Vec::new();
             for (ex_idx, _ex) in lesson.exercises.iter().enumerate() {
-                let completed = app.profile.is_exercise_completed(&course.id, lesson.number, ex_idx);
+                let completed =
+                    app.profile
+                        .is_exercise_completed(&course.id, lesson.number, ex_idx);
                 let is_step_selected = is_selected && ex_idx == app.selected_exercise_idx;
 
                 if is_step_selected {
                     if completed {
                         exercise_tags.push(Span::styled(
                             "[✓] ",
-                            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(Color::Black)
+                                .bg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD),
                         ));
                     } else {
                         exercise_tags.push(Span::styled(
                             "[▶] ",
-                            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(Color::Black)
+                                .bg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD),
                         ));
                     }
                 } else if completed {
                     exercise_tags.push(Span::styled(
                         "[✓] ",
-                        Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Theme::SUCCESS)
+                            .add_modifier(Modifier::BOLD),
                     ));
                 } else {
-                    exercise_tags.push(Span::styled(
-                        "[ ] ",
-                        Style::default().fg(Color::DarkGray),
-                    ));
+                    exercise_tags.push(Span::styled("[ ] ", Style::default().fg(Color::DarkGray)));
                 }
             }
 
-            let formatted_title = format!("Lesson {:2}: {:<width$}  ", lesson.number, lesson.title, width = max_title_len);
+            let formatted_title = format!(
+                "Lesson {:2}: {:<width$}  ",
+                lesson.number,
+                lesson.title,
+                width = max_title_len
+            );
             let mut line_spans = vec![
                 Span::styled(prefix, style),
                 Span::styled(formatted_title, style),
@@ -252,9 +309,8 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
     let block = Block::default()
         .borders(Borders::ALL)
         .title(format!(
-            " {} (Enter: Start Step {}, ←/→ or 1-4: Select Step, Esc: Back) ",
-            course.title,
-            step_display_num
+            " {} (Enter: Start Step {}, ←/→ or 1 to 4: Select Step, Esc: Back) ",
+            course.title, step_display_num
         ))
         .title_alignment(Alignment::Center)
         .border_style(Style::default().fg(Theme::ACCENT));
@@ -274,18 +330,21 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
                 ex.minimum_accuracy
             )
         })
-        .unwrap_or_else(|| "Steps: Warm-Up → Word Drill → Sentence Drill → Mastery Test".to_string());
+        .unwrap_or_else(|| {
+            "Steps: Warm Up → Word Drill → Sentence Drill → Mastery Test".to_string()
+        });
 
     let help_lines = vec![
-        Line::from(vec![
-            Span::styled(active_step_detail, Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "Navigation: [↑/↓] Lesson  |  [←/→] or [1-4] Step  |  [Enter] Start Step  |  [Esc] Back",
-                Style::default().fg(Color::DarkGray),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            active_step_detail,
+            Style::default()
+                .fg(Theme::ACCENT)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "Navigation: [↑/↓] Lesson  |  [←/→] or [1 to 4] Step  |  [Enter] Start Step  |  [Esc] Back",
+            Style::default().fg(Color::DarkGray),
+        )]),
     ];
 
     let help = Paragraph::new(help_lines).alignment(Alignment::Center);
@@ -308,19 +367,19 @@ pub fn render_speed_test_select(app: &App, frame: &mut Frame) {
     let options = [
         SpeedOption {
             key_label: "1",
-            name: "1-Minute Sprint",
+            name: "1 Minute Sprint",
             duration_label: "60s",
             desc: "Rapid cadence burst • Great for quick daily calibration",
         },
         SpeedOption {
             key_label: "2",
-            name: "2-Minute Standard Benchmark",
+            name: "2 Minute Standard Benchmark",
             duration_label: "120s",
             desc: "Standard typing examination • Balances speed and continuous focus",
         },
         SpeedOption {
             key_label: "5",
-            name: "5-Minute Endurance Assessment",
+            name: "5 Minute Endurance Assessment",
             duration_label: "300s",
             desc: "Full sustained performance audit • High focus cognitive stamina",
         },
@@ -333,20 +392,63 @@ pub fn render_speed_test_select(app: &App, frame: &mut Frame) {
             let is_selected = idx == app.selected_speed_test_idx;
             if is_selected {
                 let line = Line::from(vec![
-                    Span::styled("  ▶  ", Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("[{}] ", opt.key_label), Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("{:<32}", opt.name), Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("({:<4})  ", opt.duration_label), Style::default().fg(Color::Black).bg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("{} ", opt.desc), Style::default().fg(Color::Black).bg(Theme::ACCENT)),
+                    Span::styled(
+                        "  ▶  ",
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Theme::ACCENT)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("[{}] ", opt.key_label),
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Theme::ACCENT)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("{:<32}", opt.name),
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Theme::ACCENT)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("({:<4})  ", opt.duration_label),
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Theme::ACCENT)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("{} ", opt.desc),
+                        Style::default().fg(Color::Black).bg(Theme::ACCENT),
+                    ),
                 ]);
                 ListItem::new(line)
             } else {
                 let line = Line::from(vec![
                     Span::raw("     "),
-                    Span::styled(format!("[{}] ", opt.key_label), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("{:<32}", opt.name), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-                    Span::styled(format!("({:<4})  ", opt.duration_label), Style::default().fg(Color::Cyan)),
-                    Span::styled(format!("{} ", opt.desc), Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!("[{}] ", opt.key_label),
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("{:<32}", opt.name),
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        format!("({:<4})  ", opt.duration_label),
+                        Style::default().fg(Color::Cyan),
+                    ),
+                    Span::styled(
+                        format!("{} ", opt.desc),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ]);
                 ListItem::new(line)
             }

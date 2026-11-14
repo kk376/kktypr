@@ -1,4 +1,4 @@
-/// Represents the pedagogical stage of a progressive touch-typing lesson.
+/// Represents the pedagogical stage of a progressive touch typing lesson.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ExerciseType {
     WarmUp,
@@ -10,7 +10,7 @@ pub enum ExerciseType {
 impl ExerciseType {
     pub fn display_name(&self) -> &'static str {
         match self {
-            Self::WarmUp => "1. Warm-Up Drill",
+            Self::WarmUp => "1. Warm Up Drill",
             Self::WordDrill => "2. Word Drill",
             Self::SentenceDrill => "3. Sentence Drill",
             Self::LessonReview => "4. Lesson Mastery Test",
@@ -76,7 +76,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Home Row Warm-Up".to_string(),
+                            title: "Home Row Warm Up".to_string(),
                             prompt: "Keep your fingers resting gently on ASDF and JKL;. Strike each key without looking down.".to_string(),
                             target_text: "asdf jkl; asdf jkl; fads jkal fads jkal aass ddff jjkk ll;;".to_string(),
                             minimum_accuracy: 92.0,
@@ -91,7 +91,7 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::SentenceDrill,
                             title: "Home Row Sentences".to_string(),
-                            prompt: "Type complete home-row phrases at a steady, rhythmic pace.".to_string(),
+                            prompt: "Type complete home row phrases at a steady, rhythmic pace.".to_string(),
                             target_text: "a sad lad asks all dads; a glad lad falls; a flask asks a salad;".to_string(),
                             minimum_accuracy: 94.0,
                         },
@@ -113,7 +113,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "E and I Warm-Up".to_string(),
+                            title: "E and I Warm Up".to_string(),
                             prompt: "Practice the upward reach of both middle fingers.".to_string(),
                             target_text: "ded ded kik kik ded kik ded kik de ki ed ik dede kiki".to_string(),
                             minimum_accuracy: 92.0,
@@ -150,7 +150,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "R and U Warm-Up".to_string(),
+                            title: "R and U Warm Up".to_string(),
                             prompt: "Reach with your index fingers without drifting your whole hand.".to_string(),
                             target_text: "frf frf juj juj frf juj fr ju rf uj fur ruf jur fujr".to_string(),
                             minimum_accuracy: 92.0,
@@ -187,7 +187,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Punctuation Warm-Up".to_string(),
+                            title: "Punctuation Warm Up".to_string(),
                             prompt: "Drop down smoothly from K to comma and L to period.".to_string(),
                             target_text: "k,k k,k l.l l.l k,k l.l ,,, ... k, l. k, l. ,. ,.".to_string(),
                             minimum_accuracy: 92.0,
@@ -220,11 +220,11 @@ impl Course {
                     number: 5,
                     title: "Keys C and N".to_string(),
                     new_keys: vec!['c', 'n'],
-                    finger_guidance: "Left middle finger reaches down to C. Right index finger reaches down-left to N.".to_string(),
+                    finger_guidance: "Left middle finger reaches down to C. Right index finger reaches down left to N.".to_string(),
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "C and N Warm-Up".to_string(),
+                            title: "C and N Warm Up".to_string(),
                             prompt: "Practice downward reaches while keeping home anchor fingers in place.".to_string(),
                             target_text: "dcd dcd jnj jnj dcd jnj dc jn cd nj dcdc jnjn".to_string(),
                             minimum_accuracy: 92.0,
@@ -246,7 +246,7 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::LessonReview,
                             title: "Lesson 5 Review".to_string(),
-                            prompt: "Master smooth bottom-row reach discipline.".to_string(),
+                            prompt: "Master smooth bottom row reach discipline.".to_string(),
                             target_text: "a clean mind can craft an iron fence; coins and chains dance in fine clean sand;".to_string(),
                             minimum_accuracy: 94.0,
                         },
@@ -257,11 +257,11 @@ impl Course {
                     number: 6,
                     title: "Keys T and O".to_string(),
                     new_keys: vec!['t', 'o'],
-                    finger_guidance: "Left index finger reaches up-right to T. Right ring finger reaches up to O.".to_string(),
+                    finger_guidance: "Left index finger reaches up right to T. Right ring finger reaches up to O.".to_string(),
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "T and O Warm-Up".to_string(),
+                            title: "T and O Warm Up".to_string(),
                             prompt: "Alternate between index stretch (T) and ring stretch (O).".to_string(),
                             target_text: "ftf ftf lol lol ftf lol to ot toto lolo toot root".to_string(),
                             minimum_accuracy: 92.0,
@@ -298,7 +298,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "W and M Warm-Up".to_string(),
+                            title: "W and M Warm Up".to_string(),
                             prompt: "Coordinate left ring reach with right index descent.".to_string(),
                             target_text: "sws sws jmj jmj sws jmj sw jm ws mj swim warm".to_string(),
                             minimum_accuracy: 92.0,
@@ -331,12 +331,12 @@ impl Course {
                     number: 8,
                     title: "Keys V and B".to_string(),
                     new_keys: vec!['v', 'b'],
-                    finger_guidance: "Left index finger reaches down to V and down-right to B.".to_string(),
+                    finger_guidance: "Left index finger reaches down to V and down right to B.".to_string(),
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "V and B Warm-Up".to_string(),
-                            prompt: "Train the dual-reach mobility of the left index finger.".to_string(),
+                            title: "V and B Warm Up".to_string(),
+                            prompt: "Train the dual reach mobility of the left index finger.".to_string(),
                             target_text: "fvf fvf fbf fbf fvf fbf vb bv fv fb brave valve".to_string(),
                             minimum_accuracy: 92.0,
                         },
@@ -368,11 +368,11 @@ impl Course {
                     number: 9,
                     title: "Keys Q and P".to_string(),
                     new_keys: vec!['q', 'p'],
-                    finger_guidance: "Left pinky reaches up-left to Q. Right pinky reaches up to P.".to_string(),
+                    finger_guidance: "Left pinky reaches up left to Q. Right pinky reaches up to P.".to_string(),
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Q and P Warm-Up".to_string(),
+                            title: "Q and P Warm Up".to_string(),
                             prompt: "Strengthen pinky independence and extension.".to_string(),
                             target_text: "aqa aqa ;p; ;p; aqa ;p; qa ;p qu pl quick pride".to_string(),
                             minimum_accuracy: 92.0,
@@ -409,8 +409,8 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "X and Z Warm-Up".to_string(),
-                            prompt: "Train the delicate bottom-left reach of ring and pinky fingers.".to_string(),
+                            title: "X and Z Warm Up".to_string(),
+                            prompt: "Train the delicate bottom left reach of ring and pinky fingers.".to_string(),
                             target_text: "sxs sxs aza aza sxs aza sx az zx xz zero exact".to_string(),
                             minimum_accuracy: 92.0,
                         },
@@ -424,7 +424,7 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::SentenceDrill,
                             title: "Sentences with X and Z".to_string(),
-                            prompt: "Smoothly transition through bottom-left reaches.".to_string(),
+                            prompt: "Smoothly transition through bottom left reaches.".to_string(),
                             target_text: "solve the complex puzzle with zero panic; freeze the matrix to inspect every exact pixel;".to_string(),
                             minimum_accuracy: 94.0,
                         },
@@ -442,11 +442,11 @@ impl Course {
                     number: 11,
                     title: "Capital Letters & Shift Keys".to_string(),
                     new_keys: vec!['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
-                    finger_guidance: "Use opposite pinky for Shift! Right Shift for left-hand letters, Left Shift for right-hand letters.".to_string(),
+                    finger_guidance: "Use opposite pinky for Shift! Right Shift for left hand letters, Left Shift for right hand letters.".to_string(),
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Shift Synchronization Warm-Up".to_string(),
+                            title: "Shift Synchronization Warm Up".to_string(),
                             prompt: "Press and hold the opposite shift before striking the key, then release both.".to_string(),
                             target_text: "Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz".to_string(),
                             minimum_accuracy: 92.0,
@@ -468,7 +468,7 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::LessonReview,
                             title: "Lesson 11 Review".to_string(),
-                            prompt: "Test fluid alternating-shift mechanics.".to_string(),
+                            prompt: "Test fluid alternating shift mechanics.".to_string(),
                             target_text: "Great Engineers Design Deep Systems. Focus, Discipline, and Rigor Yield Unstoppable Velocity.".to_string(),
                             minimum_accuracy: 94.0,
                         },
@@ -483,7 +483,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Pangram Cadence Warm-Up".to_string(),
+                            title: "Pangram Cadence Warm Up".to_string(),
                             prompt: "Type comprehensive pangrams hitting every letter of the alphabet.".to_string(),
                             target_text: "the quick brown fox jumps over the lazy dog. pack my box with five dozen liquor jugs.".to_string(),
                             minimum_accuracy: 94.0,
@@ -491,7 +491,7 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::WordDrill,
                             title: "Polysyllabic Word Flow".to_string(),
-                            prompt: "Type longer words without pausing mid-word.".to_string(),
+                            prompt: "Type longer words without pausing mid word.".to_string(),
                             target_text: "architecture engineering craftsmanship philosophy telemetry infrastructure resilience".to_string(),
                             minimum_accuracy: 95.0,
                         },
@@ -504,7 +504,7 @@ impl Course {
                         },
                         Exercise {
                             exercise_type: ExerciseType::LessonReview,
-                            title: "Final Touch-Typing Certification".to_string(),
+                            title: "Final Touch Typing Certification".to_string(),
                             prompt: "Pass this comprehensive test with 95%+ accuracy to graduate from Touch Typing Basics.".to_string(),
                             target_text: "Mastery is not the absence of errors, but the quiet rhythm of continuous precision. Build clean modules, embrace strict disciplines, and let your keyboard become a transparent extension of your intellect.".to_string(),
                             minimum_accuracy: 95.0,
@@ -530,7 +530,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Bracket Warm-Up".to_string(),
+                            title: "Bracket Warm Up".to_string(),
                             prompt: "Type matching delimiter pairs.".to_string(),
                             target_text: "() [] {} (()) [[]] {{}} ([{}]) {([()])} () [] {}".to_string(),
                             minimum_accuracy: 92.0,
@@ -552,7 +552,7 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::LessonReview,
                             title: "Syntax Certification".to_string(),
-                            prompt: "Attain high accuracy on symbol-dense code.".to_string(),
+                            prompt: "Attain high accuracy on symbol dense code.".to_string(),
                             target_text: "impl<T: Clone + Send> DataPipe<T> { pub async fn forward(&mut self, payload: T) -> Result<usize, ChannelError> { Ok(1) } }".to_string(),
                             minimum_accuracy: 94.0,
                         },
@@ -566,7 +566,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Arrow & Operator Warm-Up".to_string(),
+                            title: "Arrow & Operator Warm Up".to_string(),
                             prompt: "Build muscle memory for compound operators and arrows.".to_string(),
                             target_text: "-> => == != <= >= += -= *= /= -> => == != <= >=".to_string(),
                             minimum_accuracy: 92.0,
@@ -602,7 +602,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Scope & Path Warm-Up".to_string(),
+                            title: "Scope & Path Warm Up".to_string(),
                             prompt: "Type colons, semicolons, and path qualification symbols.".to_string(),
                             target_text: ":: : ; :: : ; std::sync::Arc; std::collections::HashMap; std::path::PathBuf;".to_string(),
                             minimum_accuracy: 92.0,
@@ -638,7 +638,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Bitwise & Logic Warm-Up".to_string(),
+                            title: "Bitwise & Logic Warm Up".to_string(),
                             prompt: "Type boolean and bitwise operator pairs.".to_string(),
                             target_text: "& && | || ! ~ ^ & && | || ! ~ ^ & && | || ! ~ ^".to_string(),
                             minimum_accuracy: 92.0,
@@ -653,14 +653,14 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::SentenceDrill,
                             title: "Bitmasking & Flags".to_string(),
-                            prompt: "Type low-level bit shifting and masking expressions.".to_string(),
+                            prompt: "Type low level bit shifting and masking expressions.".to_string(),
                             target_text: "let mask: u32 = (1 << 4) | (1 << 2) | (1 << 0); let flags = header.flags() & !mask;".to_string(),
                             minimum_accuracy: 94.0,
                         },
                         Exercise {
                             exercise_type: ExerciseType::LessonReview,
                             title: "Pattern Matching with Pipes".to_string(),
-                            prompt: "Type multi-pattern match arms and error handling.".to_string(),
+                            prompt: "Type multi pattern match arms and error handling.".to_string(),
                             target_text: "match token { Token::Ident(id) | Token::Keyword(id) => emit(id), Token::Eof | Token::Whitespace => skip() }".to_string(),
                             minimum_accuracy: 94.0,
                         },
@@ -674,7 +674,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Quote & Slash Warm-Up".to_string(),
+                            title: "Quote & Slash Warm Up".to_string(),
                             prompt: "Type quotation marks, backslashes, and path delimiters.".to_string(),
                             target_text: "\"str\" 'c' `lit` \\n \\t \\r /path/to/file \"$var\" 'a' \"b\"".to_string(),
                             minimum_accuracy: 92.0,
@@ -710,7 +710,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Generic Syntax Warm-Up".to_string(),
+                            title: "Generic Syntax Warm Up".to_string(),
                             prompt: "Type generic angle brackets and lifetime annotations.".to_string(),
                             target_text: "<T> <K, V> ::<T> ::<Vec<String>> &'a str &'a mut [u8] <T: Clone>".to_string(),
                             minimum_accuracy: 92.0,
@@ -731,7 +731,7 @@ impl Course {
                         },
                         Exercise {
                             exercise_type: ExerciseType::LessonReview,
-                            title: "Zero-Cost Generic Pipeline".to_string(),
+                            title: "Zero Cost Generic Pipeline".to_string(),
                             prompt: "Type deserialization and typed container declarations.".to_string(),
                             target_text: "let parsed: Result<HashMap<String, Vec<u8>>, Error> = serde_json::from_str(&payload);".to_string(),
                             minimum_accuracy: 94.0,
@@ -746,7 +746,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Pipeline Operator Warm-Up".to_string(),
+                            title: "Pipeline Operator Warm Up".to_string(),
                             prompt: "Type method chaining calls and error try operators.".to_string(),
                             target_text: ".map() .filter() .unwrap() .unwrap_or_default() .ok()? .await? .as_ref()".to_string(),
                             minimum_accuracy: 92.0,
@@ -782,7 +782,7 @@ impl Course {
                     exercises: vec![
                         Exercise {
                             exercise_type: ExerciseType::WarmUp,
-                            title: "Systems Code Warm-Up".to_string(),
+                            title: "Systems Code Warm Up".to_string(),
                             prompt: "Type systems network connection and result return.".to_string(),
                             target_text: "fn connect(addr: &str) -> io::Result<TcpStream> { TcpStream::connect(addr) }".to_string(),
                             minimum_accuracy: 94.0,
@@ -790,7 +790,7 @@ impl Course {
                         Exercise {
                             exercise_type: ExerciseType::WordDrill,
                             title: "Macro & Unsafe Pointer Ops".to_string(),
-                            prompt: "Type attribute macros and low-level memory operations.".to_string(),
+                            prompt: "Type attribute macros and low level memory operations.".to_string(),
                             target_text: "#[inline(always)] pub unsafe fn fast_copy<T: Copy>(src: *const T, dst: *mut T, count: usize) { std::ptr::copy_nonoverlapping(src, dst, count); }".to_string(),
                             minimum_accuracy: 94.0,
                         },
@@ -849,7 +849,7 @@ mod tests {
     fn test_exercise_key_drill_classification() {
         let warm_up = Exercise {
             exercise_type: ExerciseType::WarmUp,
-            title: "Home Row Warm-Up".to_string(),
+            title: "Home Row Warm Up".to_string(),
             prompt: "Prompt".to_string(),
             target_text: "asdf jkl;".to_string(),
             minimum_accuracy: 94.0,
@@ -858,7 +858,7 @@ mod tests {
 
         let pangram_warm_up = Exercise {
             exercise_type: ExerciseType::WarmUp,
-            title: "Pangram Cadence Warm-Up".to_string(),
+            title: "Pangram Cadence Warm Up".to_string(),
             prompt: "Prompt".to_string(),
             target_text: "the quick brown fox jumps over the lazy dog.".to_string(),
             minimum_accuracy: 95.0,

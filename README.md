@@ -17,12 +17,12 @@ Most typing software falls into two categories:
 ## Highlights
 
 - **Pure Native Rust**: Built from scratch with `ratatui` and `crossterm`. Zero web views, sub millisecond input response, 60 FPS delta time arcade physics, and a lightweight standalone binary.
-- **Dual-Mode Typing Stage**:
+- **Dual Mode Typing Stage**:
   - **Natural Prose & Code Mode**: Continuous dynamic word wrapping to available terminal width. Words and code identifiers are never cut off or broken across lines. Features rolling multi line lookahead (preview upcoming lines in soft steel blue) and stationary 1 width cursor physics (letters never jitter or jump while typing).
   - **Key Drill Mode**: Spaced key tokens (`a s d f`) dynamically grouped and packed onto lines to fit any terminal geometry with zero edge clipping.
 - **Course 1: Touch Typing Basics (12 Lessons, 48 Exercises)**:
   - Structured 4 phase pedagogical progression:
-    - *Step 1: Warm-Up Drill* (finger reach & rhythm calibration)
+    - *Step 1: Warm Up Drill* (finger reach & rhythm calibration)
     - *Step 2: Word Drill* (real vocabulary using learned keys)
     - *Step 3: Sentence Drill* (natural fluid English sentences)
     - *Step 4: Mastery Test* (timed certification with 94%+ passing accuracy criteria)
@@ -46,9 +46,9 @@ Most typing software falls into two categories:
 - **Typist Profile Registry & Multi Profile Support**:
   - Create, switch, rename, or delete multiple typist profiles.
   - Atomic JSON persistence in standard XDG data directories (`~/.local/share/kktypr/profiles.json`) with automatic legacy data migration.
-- **Pro Weak Key Heatmap**: Key-by-key accuracy and error matrix. Visual color-coding (Green: ≥95%, Yellow: 80–94%, Red: <80%) highlights your exact weak fingers.
+- **Pro Weak Key Heatmap**: Key by key accuracy and error matrix. Visual color coding (Green: ≥95%, Yellow: 80 to 94%, Red: <80%) highlights your exact weak fingers.
 - **Dynamic Targeted Drill Synthesizer**: Analyzes lifetime weak keys and generates focused drill sentences targeting your specific problematic transitions.
-- **Word Drop Arcade Game**: Real-time falling-word arcade mode with combo streak multipliers, danger floor baseline, dynamic terminal scaling, and local high-score tracking.
+- **Word Drop Arcade Game**: Real time falling word arcade mode with combo streak multipliers, danger floor baseline, dynamic terminal scaling, and local high score tracking.
 - **Clean Room Standard**: 100% original Rust code, public domain prose, and original developer exercises. Zero trademarked assets or proprietary code traps.
 
 ---
@@ -97,7 +97,7 @@ Most typing software falls into two categories:
 
 ```text
 kktypr/
-├── Cargo.toml                  # Rust 2024 edition, ratatui 0.30, crossterm 0.29
+├── Cargo.toml                  # Rust, ratatui 0.30, crossterm 0.29
 ├── src/
 │   ├── main.rs                 # Terminal raw mode initialization, panic hook, 60 FPS event loop
 │   ├── app.rs                  # Application state controller, screen router, key event dispatch
@@ -126,13 +126,25 @@ kktypr/
 
 ---
 
-## Building & Installation
+## Installation
 
-### Prerequisites
-- **Rust 1.85+** (Rust 2024 Edition)
-- Standard terminal emulator with UTF-8 support (Ghostty, Foot, Alacritty, Kitty, WezTerm, GNOME Terminal)
+### Multi-OS Packages (Coming Soon)
+
+Pre-built native packages and package manager repositories are coming soon for:
+- **Ubuntu / Debian / Linux Mint** (`.deb` / PPA)
+- **Fedora / RHEL / Rocky Linux** (`.rpm` / Copr)
+- **Arch Linux** (Pacman package)
+- **openSUSE** (OBS)
+- **macOS** (Homebrew tap)
+- **Windows** (Standalone portable `.zip` release)
+- **Static Linux** (`x86_64` and `aarch64` musl standalone static binaries)
 
 ### Build from source
+
+#### Prerequisites
+- **Rust 1.85+**
+- Standard terminal emulator with UTF-8 support (Ghostty, Foot, Alacritty, Kitty, WezTerm, GNOME Terminal)
+
 ```bash
 # Clone the repository
 git clone https://github.com/kk376/kktypr.git

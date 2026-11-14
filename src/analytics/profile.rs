@@ -1,10 +1,10 @@
+use crate::analytics::heatmap::KeyHeatmap;
+use crate::engine::metrics::TypingMetrics;
+use directories::ProjectDirs;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
-use directories::ProjectDirs;
-use serde::{Deserialize, Serialize};
-use crate::analytics::heatmap::KeyHeatmap;
-use crate::engine::metrics::TypingMetrics;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserProfile {
@@ -52,7 +52,12 @@ impl UserProfile {
         format!("{}:{}:{}", course_id, lesson_num, exercise_idx)
     }
 
-    pub fn is_exercise_completed(&self, course_id: &str, lesson_num: usize, exercise_idx: usize) -> bool {
+    pub fn is_exercise_completed(
+        &self,
+        course_id: &str,
+        lesson_num: usize,
+        exercise_idx: usize,
+    ) -> bool {
         let key = Self::exercise_key(course_id, lesson_num, exercise_idx);
         self.completed_exercises.contains(&key)
     }
@@ -120,7 +125,11 @@ impl ProfileStore {
     }
 
     pub fn update_active(&mut self, profile: &UserProfile) {
-        if let Some(idx) = self.profiles.iter().position(|p| p.name.eq_ignore_ascii_case(&self.active_name)) {
+        if let Some(idx) = self
+            .profiles
+            .iter()
+            .position(|p| p.name.eq_ignore_ascii_case(&self.active_name))
+        {
             self.profiles[idx] = profile.clone();
             self.active_name = profile.name.clone();
         } else {
@@ -130,7 +139,11 @@ impl ProfileStore {
     }
 
     pub fn switch_profile(&mut self, name: &str) -> bool {
-        if let Some(p) = self.profiles.iter().find(|p| p.name.eq_ignore_ascii_case(name)) {
+        if let Some(p) = self
+            .profiles
+            .iter()
+            .find(|p| p.name.eq_ignore_ascii_case(name))
+        {
             self.active_name = p.name.clone();
             true
         } else {
@@ -146,7 +159,11 @@ impl ProfileStore {
         if trimmed.chars().count() > 24 {
             return Err("Profile name must be 24 characters or less.");
         }
-        if self.profiles.iter().any(|p| p.name.eq_ignore_ascii_case(trimmed)) {
+        if self
+            .profiles
+            .iter()
+            .any(|p| p.name.eq_ignore_ascii_case(trimmed))
+        {
             return Err("A profile with this name already exists.");
         }
         let new_profile = UserProfile::new(trimmed);
@@ -164,12 +181,19 @@ impl ProfileStore {
             return Err("Profile name must be 24 characters or less.");
         }
         if !old_name.eq_ignore_ascii_case(trimmed)
-            && self.profiles.iter().any(|p| p.name.eq_ignore_ascii_case(trimmed))
+            && self
+                .profiles
+                .iter()
+                .any(|p| p.name.eq_ignore_ascii_case(trimmed))
         {
             return Err("A profile with this name already exists.");
         }
 
-        if let Some(p) = self.profiles.iter_mut().find(|p| p.name.eq_ignore_ascii_case(old_name)) {
+        if let Some(p) = self
+            .profiles
+            .iter_mut()
+            .find(|p| p.name.eq_ignore_ascii_case(old_name))
+        {
             p.name = trimmed.to_string();
             if self.active_name.eq_ignore_ascii_case(old_name) {
                 self.active_name = trimmed.to_string();
@@ -260,8 +284,8 @@ impl ProfileStore {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        let json =
+            serde_json::to_string_pretty(self).map_err(|e| std::io::Error::other(e.to_string()))?;
 
         let tmp_path = path.with_extension("tmp");
         fs::write(&tmp_path, json)?;
@@ -316,7 +340,11 @@ mod tests {
         // Disallow duplicate names or overly long names
         assert!(store.add_profile("kushagra").is_err());
         assert!(store.add_profile("").is_err());
-        assert!(store.add_profile("ThisNameIsWayTooLongForATypistProfile").is_err());
+        assert!(
+            store
+                .add_profile("ThisNameIsWayTooLongForATypistProfile")
+                .is_err()
+        );
 
         // Switch profile
         assert!(store.switch_profile("Typist"));

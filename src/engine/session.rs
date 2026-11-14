@@ -1,5 +1,5 @@
-use std::time::{Duration, Instant};
 use crate::engine::metrics::TypingMetrics;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CharStatus {
@@ -62,9 +62,10 @@ impl TypingSession {
             return true;
         }
         if let Some(limit) = self.time_limit
-            && self.elapsed() >= limit {
-                return true;
-            }
+            && self.elapsed() >= limit
+        {
+            return true;
+        }
         false
     }
 
