@@ -40,6 +40,14 @@ impl UserProfile {
         }
     }
 
+    pub fn reset(&mut self) {
+        let preserved_name = self.name.clone();
+        *self = Self {
+            name: preserved_name,
+            ..Default::default()
+        };
+    }
+
     pub fn exercise_key(course_id: &str, lesson_num: usize, exercise_idx: usize) -> String {
         format!("{}:{}:{}", course_id, lesson_num, exercise_idx)
     }
@@ -130,5 +138,12 @@ mod tests {
         assert_eq!(profile.total_sessions, 1);
         assert_eq!(profile.best_gross_wpm, 65.0);
         assert_eq!(profile.best_net_wpm, 62.0);
+
+        profile.reset();
+        assert!(!profile.is_exercise_completed("basics", 1, 0));
+        assert_eq!(profile.total_sessions, 0);
+        assert_eq!(profile.best_gross_wpm, 0.0);
+        assert_eq!(profile.best_net_wpm, 0.0);
+        assert_eq!(profile.name, "Kushagra");
     }
 }

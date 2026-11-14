@@ -31,6 +31,8 @@ pub struct App {
     pub active_session: Option<TypingSession>,
     pub last_metrics: Option<TypingMetrics>,
     pub game: WordDropGame,
+    pub confirm_reset_stats: bool,
+    pub status_notification: Option<String>,
     pub should_quit: bool,
 }
 
@@ -53,6 +55,8 @@ impl App {
             active_session: None,
             last_metrics: None,
             game: WordDropGame::new(80, 24),
+            confirm_reset_stats: false,
+            status_notification: None,
             should_quit: false,
         }
     }
@@ -164,16 +168,39 @@ impl App {
     }
 
     fn handle_menu_key(&mut self, key: KeyEvent) {
+        if self.confirm_reset_stats {
+            match key.code {
+                KeyCode::Char('y') | KeyCode::Char('Y') => {
+                    self.profile.reset();
+                    let _ = self.profile.save();
+                    self.confirm_reset_stats = false;
+                    self.status_notification = Some("All statistics, speeds, and heatmap data have been reset.".to_string());
+                }
+                KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                    self.confirm_reset_stats = false;
+                    self.status_notification = Some("Reset cancelled.".to_string());
+                }
+                _ => {}
+            }
+            return;
+        }
+
         match key.code {
             KeyCode::Up | KeyCode::Char('k') => {
                 if self.selected_menu_idx > 0 {
                     self.selected_menu_idx -= 1;
                 }
+                self.status_notification = None;
             }
             KeyCode::Down | KeyCode::Char('j') => {
-                if self.selected_menu_idx < 5 {
+                if self.selected_menu_idx < 6 {
                     self.selected_menu_idx += 1;
                 }
+                self.status_notification = None;
+            }
+            KeyCode::Char('r') => {
+                self.confirm_reset_stats = true;
+                self.status_notification = None;
             }
             KeyCode::Enter => match self.selected_menu_idx {
                 0 => self.screen = AppScreen::CourseSelect,
@@ -184,7 +211,11 @@ impl App {
                     self.screen = AppScreen::WordDropGame;
                 }
                 4 => self.screen = AppScreen::Stats,
-                5 => self.should_quit = true,
+                5 => {
+                    self.confirm_reset_stats = true;
+                    self.status_notification = None;
+                }
+                6 => self.should_quit = true,
                 _ => {}
             },
             KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
@@ -327,5 +358,50 @@ impl App {
             KeyCode::Esc | KeyCode::Char('q') | KeyCode::Enter => self.screen = AppScreen::MainMenu,
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyEventState;
+
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent {
+            code,
+            modifiers: KeyModifiers::empty(),
+            kind: crossterm::event::KeyEventKind::Press,
+            state: KeyEventState::empty(),
+        }
+    }
+
+    #[test]
+    fn test_app_reset_stats_workflow() {
+        let mut app = App::new();
+        app.profile.best_gross_wpm = 75.0;
+        app.profile.total_sessions = 10;
+        app.profile.completed_exercises.insert("basics:1:0".to_string());
+
+        // Press 'r' in main menu triggers confirmation
+        app.handle_key_event(key(KeyCode::Char('r')));
+        assert!(app.confirm_reset_stats);
+
+        // Cancel with 'n'
+        app.handle_key_event(key(KeyCode::Char('n')));
+        assert!(!app.confirm_reset_stats);
+        assert_eq!(app.profile.best_gross_wpm, 75.0);
+
+        // Select item 5 (Reset All Statistics) and press Enter
+        app.selected_menu_idx = 5;
+        app.handle_key_event(key(KeyCode::Enter));
+        assert!(app.confirm_reset_stats);
+
+        // Confirm with 'y'
+        app.handle_key_event(key(KeyCode::Char('y')));
+        assert!(!app.confirm_reset_stats);
+        assert_eq!(app.profile.best_gross_wpm, 0.0);
+        assert_eq!(app.profile.total_sessions, 0);
+        assert!(app.profile.completed_exercises.is_empty());
+        assert!(app.status_notification.is_some());
     }
 }

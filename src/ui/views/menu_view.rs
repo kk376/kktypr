@@ -43,22 +43,26 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
         "3. Weak-Key Diagnostics & Targeted Review",
         "4. Word Drop Arcade Game",
         "5. Typist Profile & Heatmap",
-        "6. Exit",
+        "6. Reset All Statistics & Progress",
+        "7. Exit",
     ];
 
-    let items: Vec<ListItem> = menu_items
+    let mut items: Vec<ListItem> = menu_items
         .iter()
         .enumerate()
         .map(|(idx, title)| {
             let is_selected = idx == app.selected_menu_idx;
             let (prefix, style) = if is_selected {
+                let bg_color = if idx == 5 { Color::Red } else { Theme::ACCENT };
                 (
                     "  ▶  ",
                     Style::default()
                         .fg(Color::Black)
-                        .bg(Theme::ACCENT)
+                        .bg(bg_color)
                         .add_modifier(Modifier::BOLD),
                 )
+            } else if idx == 5 {
+                ("     ", Style::default().fg(Color::LightRed))
             } else {
                 ("     ", Style::default().fg(Color::White))
             };
@@ -71,11 +75,37 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
         })
         .collect();
 
+    if app.confirm_reset_stats {
+        items.push(ListItem::new(Line::from("")));
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled(
+                "  ⚠️  WARNING: Press [y] to confirm wiping all progress & stats, or [n/Esc] to cancel.",
+                Style::default().fg(Color::White).bg(Color::Red).add_modifier(Modifier::BOLD),
+            ),
+        ])));
+    }
+
+    let menu_title = if app.confirm_reset_stats {
+        " ⚠️  RESET STATS CONFIRMATION: Press [y] to Wipe, [n/Esc] to Cancel  ⚠️ ".to_string()
+    } else if let Some(ref note) = app.status_notification {
+        format!(" ✓ {} ", note)
+    } else {
+        " Navigation (↑/k: Up, ↓/j: Down, Enter: Select, r: Reset Stats, q: Quit) ".to_string()
+    };
+
+    let border_color = if app.confirm_reset_stats {
+        Color::Red
+    } else if app.status_notification.is_some() {
+        Theme::SUCCESS
+    } else {
+        Color::DarkGray
+    };
+
     let menu_block = Block::default()
         .borders(Borders::ALL)
-        .title(" Navigation (↑/k: Up, ↓/j: Down, Enter: Select, q: Quit) ")
+        .title(menu_title)
         .title_alignment(Alignment::Center)
-        .border_style(Style::default().fg(Color::DarkGray));
+        .border_style(Style::default().fg(border_color));
 
     let menu_list = List::new(items).block(menu_block);
     frame.render_widget(menu_list, chunks[1]);
