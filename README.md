@@ -97,7 +97,10 @@ Most typing software falls into two categories:
 
 ```text
 kktypr/
+├── .github/
+│   └── workflows/ci.yml        # GitHub Actions CI (fmt, clippy, test, cross-platform)
 ├── Cargo.toml                  # Rust, ratatui 0.30, crossterm 0.29
+├── LICENSE                     # Dual MIT / Apache 2.0 license declaration
 ├── src/
 │   ├── main.rs                 # Terminal raw mode initialization, panic hook, 60 FPS event loop
 │   ├── app.rs                  # Application state controller, screen router, key event dispatch
@@ -106,11 +109,11 @@ kktypr/
 │   │   ├── metrics.rs          # Gross WPM, Net WPM, accuracy, and keystroke metrics
 │   │   └── curriculum.rs       # Course 1 (Basics: 12 Lessons), Course 2 (Developer: 8 Lessons)
 │   ├── analytics/
-│   │   ├── heatmap.rs          # Per-key accuracy and error frequency matrices
-│   │   ├── targeted.rs         # Algorithmic weak-key drill generator
-│   │   └── profile.rs          # Multi-profile registry and atomic JSON storage
+│   │   ├── heatmap.rs          # Key by key accuracy and error frequency matrices
+│   │   ├── targeted.rs         # Algorithmic weak key drill generator
+│   │   └── profile.rs          # Multi profile registry and atomic JSON storage
 │   ├── game/
-│   │   └── word_drop.rs        # Terminal falling-word arcade physics loop
+│   │   └── word_drop.rs        # Terminal falling word arcade physics loop
 │   └── ui/
 │       ├── mod.rs              # Frame router and overlay compositor
 │       ├── theme.rs            # Color tokens and styling rules
