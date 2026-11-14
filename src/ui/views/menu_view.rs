@@ -43,8 +43,9 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
         "3. Weak-Key Diagnostics & Targeted Review",
         "4. Word Drop Arcade Game",
         "5. Typist Profile & Heatmap",
-        "6. Reset All Statistics & Progress",
-        "7. Exit",
+        "6. Typist Profile Manager (Switch, Add, Rename)",
+        "7. Reset All Statistics & Progress",
+        "8. Exit",
     ];
 
     let mut items: Vec<ListItem> = menu_items
@@ -53,7 +54,7 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
         .map(|(idx, title)| {
             let is_selected = idx == app.selected_menu_idx;
             let (prefix, style) = if is_selected {
-                let bg_color = if idx == 5 { Color::Red } else { Theme::ACCENT };
+                let bg_color = if idx == 6 { Color::Red } else { Theme::ACCENT };
                 (
                     "  ▶  ",
                     Style::default()
@@ -61,7 +62,7 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
                         .bg(bg_color)
                         .add_modifier(Modifier::BOLD),
                 )
-            } else if idx == 5 {
+            } else if idx == 6 {
                 ("     ", Style::default().fg(Color::LightRed))
             } else {
                 ("     ", Style::default().fg(Color::White))
@@ -69,7 +70,7 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
 
             let line = Line::from(vec![
                 Span::styled(prefix, style),
-                Span::styled(format!("{:<46}", title), style),
+                Span::styled(format!("{:<48}", title), style),
             ]);
             ListItem::new(line)
         })
@@ -79,8 +80,8 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
         items.push(ListItem::new(Line::from("")));
         items.push(ListItem::new(Line::from(vec![
             Span::styled(
-                "  ⚠️  WARNING: Press [y] to confirm wiping all progress & stats, or [n/Esc] to cancel.",
-                Style::default().fg(Color::White).bg(Color::Red).add_modifier(Modifier::BOLD),
+                "  ⚠️  WARNING: Press [y] to confirm wiping all progress & stats, or [n/Esc] to cancel.  ",
+                Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD),
             ),
         ])));
     }

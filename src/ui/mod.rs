@@ -16,5 +16,11 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         AppScreen::TargetedReview => views::dashboard::render_targeted_review(app, frame),
         AppScreen::WordDropGame => views::game_view::render_word_drop(app, frame),
         AppScreen::Stats => views::dashboard::render_stats(app, frame),
+        AppScreen::ProfileManager => views::profile_view::render_profile_manager(app, frame),
+    }
+
+    // Render floating modal dialog on top if active
+    if let Some(ref prompt) = app.name_prompt {
+        views::modal_view::render_name_prompt_modal(prompt, frame);
     }
 }

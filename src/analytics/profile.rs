@@ -88,6 +88,7 @@ impl UserProfile {
         }
     }
 
+    #[allow(dead_code)]
     pub fn load_or_default() -> Self {
         let path = Self::default_storage_path();
         if path.exists()
@@ -107,6 +108,171 @@ impl UserProfile {
             .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         // Atomic write: write to temp file then rename
+        let tmp_path = path.with_extension("tmp");
+        fs::write(&tmp_path, json)?;
+        fs::rename(&tmp_path, &path)?;
+        Ok(())
+    }
+}
+
+/// Registry of multiple typist profiles, managing profile switching, adding, and renaming.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileStore {
+    pub active_name: String,
+    pub profiles: Vec<UserProfile>,
+    #[serde(skip)]
+    pub is_first_run: bool,
+}
+
+impl Default for ProfileStore {
+    fn default() -> Self {
+        let def = UserProfile::default();
+        Self {
+            active_name: def.name.clone(),
+            profiles: vec![def],
+            is_first_run: true,
+        }
+    }
+}
+
+impl ProfileStore {
+    pub fn active(&self) -> &UserProfile {
+        self.profiles
+            .iter()
+            .find(|p| p.name.eq_ignore_ascii_case(&self.active_name))
+            .or_else(|| self.profiles.first())
+            .expect("ProfileStore must contain at least one profile")
+    }
+
+    #[allow(dead_code)]
+    pub fn active_mut(&mut self) -> &mut UserProfile {
+        if let Some(idx) = self.profiles.iter().position(|p| p.name.eq_ignore_ascii_case(&self.active_name)) {
+            &mut self.profiles[idx]
+        } else {
+            &mut self.profiles[0]
+        }
+    }
+
+    pub fn update_active(&mut self, profile: &UserProfile) {
+        if let Some(idx) = self.profiles.iter().position(|p| p.name.eq_ignore_ascii_case(&self.active_name)) {
+            self.profiles[idx] = profile.clone();
+            self.active_name = profile.name.clone();
+        } else {
+            self.profiles.push(profile.clone());
+            self.active_name = profile.name.clone();
+        }
+    }
+
+    pub fn switch_profile(&mut self, name: &str) -> bool {
+        if let Some(p) = self.profiles.iter().find(|p| p.name.eq_ignore_ascii_case(name)) {
+            self.active_name = p.name.clone();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn add_profile(&mut self, name: &str) -> Result<(), &'static str> {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            return Err("Profile name cannot be blank.");
+        }
+        if self.profiles.iter().any(|p| p.name.eq_ignore_ascii_case(trimmed)) {
+            return Err("A profile with this name already exists.");
+        }
+        let new_profile = UserProfile::new(trimmed);
+        self.active_name = new_profile.name.clone();
+        self.profiles.push(new_profile);
+        Ok(())
+    }
+
+    pub fn rename_profile(&mut self, old_name: &str, new_name: &str) -> Result<(), &'static str> {
+        let trimmed = new_name.trim();
+        if trimmed.is_empty() {
+            return Err("Profile name cannot be blank.");
+        }
+        if !old_name.eq_ignore_ascii_case(trimmed)
+            && self.profiles.iter().any(|p| p.name.eq_ignore_ascii_case(trimmed))
+        {
+            return Err("A profile with this name already exists.");
+        }
+
+        if let Some(p) = self.profiles.iter_mut().find(|p| p.name.eq_ignore_ascii_case(old_name)) {
+            p.name = trimmed.to_string();
+            if self.active_name.eq_ignore_ascii_case(old_name) {
+                self.active_name = trimmed.to_string();
+            }
+            Ok(())
+        } else {
+            Err("Profile not found.")
+        }
+    }
+
+    pub fn delete_profile(&mut self, name: &str) -> Result<(), &'static str> {
+        if self.profiles.len() <= 1 {
+            return Err("Cannot delete the only existing profile.");
+        }
+        let pos = self
+            .profiles
+            .iter()
+            .position(|p| p.name.eq_ignore_ascii_case(name))
+            .ok_or("Profile not found.")?;
+        self.profiles.remove(pos);
+        if self.active_name.eq_ignore_ascii_case(name) {
+            self.active_name = self.profiles[0].name.clone();
+        }
+        Ok(())
+    }
+
+    pub fn storage_path() -> PathBuf {
+        if let Some(proj) = ProjectDirs::from("com", "kktypr", "kktypr") {
+            let data_dir = proj.data_local_dir();
+            data_dir.join("profiles.json")
+        } else {
+            PathBuf::from("profiles.json")
+        }
+    }
+
+    pub fn load_or_default() -> Self {
+        let path = Self::storage_path();
+        if path.exists()
+            && let Ok(content) = fs::read_to_string(&path)
+            && let Ok(mut store) = serde_json::from_str::<ProfileStore>(&content)
+        {
+            if store.profiles.is_empty() {
+                store = Self::default();
+            }
+            store.is_first_run = false;
+            return store;
+        }
+
+        // Check legacy single-profile file
+        let legacy_path = UserProfile::default_storage_path();
+        if legacy_path.exists()
+            && let Ok(content) = fs::read_to_string(&legacy_path)
+            && let Ok(legacy_profile) = serde_json::from_str::<UserProfile>(&content)
+        {
+            let store = ProfileStore {
+                active_name: legacy_profile.name.clone(),
+                profiles: vec![legacy_profile],
+                is_first_run: false,
+            };
+            let _ = store.save();
+            return store;
+        }
+
+        // Clean first run
+        Self::default()
+    }
+
+    pub fn save(&self) -> Result<(), std::io::Error> {
+        let path = Self::storage_path();
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
+
         let tmp_path = path.with_extension("tmp");
         fs::write(&tmp_path, json)?;
         fs::rename(&tmp_path, &path)?;
@@ -145,5 +311,36 @@ mod tests {
         assert_eq!(profile.best_gross_wpm, 0.0);
         assert_eq!(profile.best_net_wpm, 0.0);
         assert_eq!(profile.name, "Kushagra");
+    }
+
+    #[test]
+    fn test_profile_store_crud() {
+        let mut store = ProfileStore::default();
+        assert_eq!(store.active().name, "Typist");
+
+        // Add profile
+        assert!(store.add_profile("Kushagra").is_ok());
+        assert_eq!(store.active().name, "Kushagra");
+        assert_eq!(store.profiles.len(), 2);
+
+        // Disallow duplicate names
+        assert!(store.add_profile("kushagra").is_err());
+        assert!(store.add_profile("").is_err());
+
+        // Switch profile
+        assert!(store.switch_profile("Typist"));
+        assert_eq!(store.active().name, "Typist");
+
+        // Rename profile
+        assert!(store.rename_profile("Typist", "Guest").is_ok());
+        assert_eq!(store.active().name, "Guest");
+
+        // Delete profile
+        assert!(store.delete_profile("Guest").is_ok());
+        assert_eq!(store.profiles.len(), 1);
+        assert_eq!(store.active().name, "Kushagra");
+
+        // Cannot delete only remaining profile
+        assert!(store.delete_profile("Kushagra").is_err());
     }
 }
