@@ -28,6 +28,17 @@ pub struct Exercise {
     pub minimum_accuracy: f64,
 }
 
+impl Exercise {
+    /// Returns true if this exercise is an isolated key-preparation drill
+    /// (e.g. repeated letter groups like "asdf jkl;" or "ded kik").
+    /// Natural sentences, pangrams, word drills, code expressions, and paragraphs return false.
+    pub fn is_key_drill(&self) -> bool {
+        self.exercise_type == ExerciseType::WarmUp
+            && !self.title.contains("Pangram")
+            && !self.title.to_lowercase().contains("code")
+    }
+}
+
 /// A lesson introducing specific keys and containing progressive exercises.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Lesson {
@@ -572,5 +583,44 @@ mod tests {
     fn test_developer_course() {
         let dev_course = Course::developer_special();
         assert!(!dev_course.lessons.is_empty());
+    }
+
+    #[test]
+    fn test_exercise_key_drill_classification() {
+        let warm_up = Exercise {
+            exercise_type: ExerciseType::WarmUp,
+            title: "Home Row Warm-Up".to_string(),
+            prompt: "Prompt".to_string(),
+            target_text: "asdf jkl;".to_string(),
+            minimum_accuracy: 94.0,
+        };
+        assert!(warm_up.is_key_drill());
+
+        let pangram_warm_up = Exercise {
+            exercise_type: ExerciseType::WarmUp,
+            title: "Pangram Cadence Warm-Up".to_string(),
+            prompt: "Prompt".to_string(),
+            target_text: "the quick brown fox jumps over the lazy dog.".to_string(),
+            minimum_accuracy: 95.0,
+        };
+        assert!(!pangram_warm_up.is_key_drill());
+
+        let sentence_drill = Exercise {
+            exercise_type: ExerciseType::SentenceDrill,
+            title: "Sentences with E and I".to_string(),
+            prompt: "Prompt".to_string(),
+            target_text: "she feels safe inside the field;".to_string(),
+            minimum_accuracy: 94.0,
+        };
+        assert!(!sentence_drill.is_key_drill());
+
+        let word_drill = Exercise {
+            exercise_type: ExerciseType::WordDrill,
+            title: "Home Row Words".to_string(),
+            prompt: "Prompt".to_string(),
+            target_text: "all fall salad ask flask".to_string(),
+            minimum_accuracy: 94.0,
+        };
+        assert!(!word_drill.is_key_drill());
     }
 }

@@ -94,6 +94,10 @@ impl TypingSession {
         self.target_chars.get(index).copied()
     }
 
+    pub fn target_chars(&self) -> &[char] {
+        &self.target_chars
+    }
+
     pub fn current_expected_char(&self) -> Option<char> {
         self.target_char_at(self.cursor())
     }

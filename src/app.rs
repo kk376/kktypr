@@ -133,6 +133,15 @@ impl App {
             .and_then(|l| l.exercises.get(self.selected_exercise_idx))
     }
 
+    pub fn is_current_exercise_key_drill(&self) -> bool {
+        if self.session_origin != AppScreen::LessonSelect {
+            return false;
+        }
+        self.current_exercise()
+            .map(|ex| ex.is_key_drill())
+            .unwrap_or(false)
+    }
+
     pub fn start_current_exercise(&mut self) {
         if let Some(exercise) = self.current_exercise() {
             let session = TypingSession::new(&exercise.target_text, None);
@@ -785,5 +794,35 @@ mod tests {
         assert_eq!(app.screen, AppScreen::TargetedReview);
         app.handle_key_event(key(KeyCode::Esc));
         assert_eq!(app.screen, AppScreen::MainMenu);
+    }
+
+    #[test]
+    fn test_app_key_drill_vs_prose_mode_resolution() {
+        let mut app = App::new();
+
+        // 1. In Lesson 1 Exercise 0 (Home Row Warm-Up): should be key drill
+        app.selected_course_idx = 0;
+        app.selected_lesson_idx = 0;
+        app.selected_exercise_idx = 0;
+        app.start_current_exercise();
+        assert!(app.is_current_exercise_key_drill());
+
+        // 2. In Lesson 1 Exercise 1 (Word Drill): should be prose
+        app.selected_exercise_idx = 1;
+        app.start_current_exercise();
+        assert!(!app.is_current_exercise_key_drill());
+
+        // 3. In Lesson 1 Exercise 2 (Sentence Drill): should be prose
+        app.selected_exercise_idx = 2;
+        app.start_current_exercise();
+        assert!(!app.is_current_exercise_key_drill());
+
+        // 4. In Speed Test: ALWAYS prose (never key drill)
+        app.start_speed_test(60);
+        assert!(!app.is_current_exercise_key_drill());
+
+        // 5. In Targeted Review: ALWAYS prose (words)
+        app.start_targeted_drill();
+        assert!(!app.is_current_exercise_key_drill());
     }
 }
