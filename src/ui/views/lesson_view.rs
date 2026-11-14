@@ -482,12 +482,12 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
             .block(Block::default().borders(Borders::ALL).title(" Cadence ").title_alignment(Alignment::Center));
         frame.render_widget(cadence_p, chunks[4]);
 
-        let shortcut_p = Paragraph::new("[Esc] Cancel & Exit")
+        let shortcut_p = Paragraph::new("[Esc] Back")
             .alignment(Alignment::Center)
             .style(Style::default().fg(Color::DarkGray));
         frame.render_widget(shortcut_p, chunks[5]);
     } else {
-        let shortcut_p = Paragraph::new("[Esc] Cancel & Exit")
+        let shortcut_p = Paragraph::new("[Esc] Back")
             .alignment(Alignment::Center)
             .style(Style::default().fg(Color::DarkGray));
         frame.render_widget(shortcut_p, chunks[4]);
@@ -523,6 +523,13 @@ pub fn render_results(app: &App, frame: &mut Frame) {
         ])
     };
 
+    let back_label = match app.session_origin {
+        crate::app::AppScreen::LessonSelect => "[Esc] Lessons  ",
+        crate::app::AppScreen::SpeedTestSelect => "[Esc] Speed Tests  ",
+        crate::app::AppScreen::TargetedReview => "[Esc] Targeted Review  ",
+        _ => "[Esc] Back  ",
+    };
+
     let content = vec![
         Line::from(""),
         verdict_line,
@@ -551,9 +558,10 @@ pub fn render_results(app: &App, frame: &mut Frame) {
         Line::from(""),
         Line::from(vec![
             Span::styled("Actions: ", Style::default().fg(Color::Gray)),
-            Span::styled("[r] Retry Exercise  ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::styled("[n/Enter] Next Step  ", Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD)),
-            Span::styled("[m/Esc] Main Menu", Style::default().fg(Color::Cyan)),
+            Span::styled("[r] Retry  ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::styled("[n/Enter] Next  ", Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD)),
+            Span::styled(back_label, Style::default().fg(Color::Cyan)),
+            Span::styled("[m] Main Menu", Style::default().fg(Color::Gray)),
         ]),
     ];
 

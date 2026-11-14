@@ -53,6 +53,8 @@ pub struct App {
     pub needs_name_prompt_on_next_mode: bool,
     pub name_prompt: Option<NamePromptState>,
     pub status_notification: Option<String>,
+    pub session_origin: AppScreen,
+    pub last_speed_test_secs: u64,
     pub should_quit: bool,
 }
 
@@ -93,6 +95,8 @@ impl App {
             needs_name_prompt_on_next_mode: false,
             name_prompt,
             status_notification: None,
+            session_origin: AppScreen::MainMenu,
+            last_speed_test_secs: 60,
             should_quit: false,
         }
     }
@@ -133,6 +137,7 @@ impl App {
         if let Some(exercise) = self.current_exercise() {
             let session = TypingSession::new(&exercise.target_text, None);
             self.active_session = Some(session);
+            self.session_origin = AppScreen::LessonSelect;
             self.screen = AppScreen::TypingActive;
         }
     }
@@ -141,6 +146,8 @@ impl App {
         let test_text = "Software engineering is the systematic application of engineering approaches to the development of software. Clean room design ensures that software implementations remain strictly independent of proprietary reference code. High performance terminal user interfaces provide immediate feedback, predictable latency, and maximum developer focus. Touch typing empowers engineers to express ideas without cognitive friction.";
         let session = TypingSession::new(test_text, Some(Duration::from_secs(duration_secs)));
         self.active_session = Some(session);
+        self.session_origin = AppScreen::SpeedTestSelect;
+        self.last_speed_test_secs = duration_secs;
         self.screen = AppScreen::TypingActive;
     }
 
@@ -156,6 +163,7 @@ impl App {
         let drill_text = TargetedDrillGenerator::generate_drill(&weakest, 25);
         let session = TypingSession::new(&drill_text, None);
         self.active_session = Some(session);
+        self.session_origin = AppScreen::TargetedReview;
         self.screen = AppScreen::TypingActive;
     }
 
@@ -183,7 +191,7 @@ impl App {
             }
 
             // Record completion if in course mode and accuracy threshold met
-            if self.selected_course_idx < self.courses.len() {
+            if self.session_origin == AppScreen::LessonSelect && self.selected_course_idx < self.courses.len() {
                 let course_id = self.current_course().id.clone();
                 if let Some(ex) = self.current_exercise()
                     && metrics.accuracy_pct >= ex.minimum_accuracy {
@@ -503,7 +511,7 @@ impl App {
             match key.code {
                 KeyCode::Esc => {
                     self.active_session = None;
-                    self.screen = AppScreen::MainMenu;
+                    self.screen = self.session_origin;
                 }
                 KeyCode::Backspace => {
                     session.pop_char();
@@ -522,25 +530,40 @@ impl App {
     fn handle_results_key(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char('r') | KeyCode::Char('R') => {
-                self.start_current_exercise();
+                match self.session_origin {
+                    AppScreen::LessonSelect => self.start_current_exercise(),
+                    AppScreen::SpeedTestSelect => self.start_speed_test(self.last_speed_test_secs),
+                    AppScreen::TargetedReview => self.start_targeted_drill(),
+                    _ => self.start_current_exercise(),
+                }
             }
             KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Enter => {
-                // Advance to next exercise or lesson
-                if let Some(course) = self.courses.get(self.selected_course_idx)
-                    && let Some(lesson) = course.lessons.get(self.selected_lesson_idx) {
-                        if self.selected_exercise_idx + 1 < lesson.exercises.len() {
-                            self.selected_exercise_idx += 1;
-                            self.start_current_exercise();
-                        } else if self.selected_lesson_idx + 1 < course.lessons.len() {
-                            self.selected_lesson_idx += 1;
-                            self.selected_exercise_idx = 0;
-                            self.start_current_exercise();
-                        } else {
-                            self.screen = AppScreen::LessonSelect;
-                        }
+                match self.session_origin {
+                    AppScreen::LessonSelect => {
+                        // Advance to next exercise or lesson
+                        if let Some(course) = self.courses.get(self.selected_course_idx)
+                            && let Some(lesson) = course.lessons.get(self.selected_lesson_idx) {
+                                if self.selected_exercise_idx + 1 < lesson.exercises.len() {
+                                    self.selected_exercise_idx += 1;
+                                    self.start_current_exercise();
+                                } else if self.selected_lesson_idx + 1 < course.lessons.len() {
+                                    self.selected_lesson_idx += 1;
+                                    self.selected_exercise_idx = 0;
+                                    self.start_current_exercise();
+                                } else {
+                                    self.screen = AppScreen::LessonSelect;
+                                }
+                            }
                     }
+                    _ => {
+                        self.screen = self.session_origin;
+                    }
+                }
             }
-            KeyCode::Esc | KeyCode::Char('m') | KeyCode::Char('q') => {
+            KeyCode::Esc | KeyCode::Char('q') => {
+                self.screen = self.session_origin;
+            }
+            KeyCode::Char('m') => {
                 self.screen = AppScreen::MainMenu;
             }
             _ => {}
@@ -692,6 +715,74 @@ mod tests {
         assert_eq!(app.profile.name, "Bob");
 
         // Esc returns to MainMenu
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::MainMenu);
+    }
+
+    #[test]
+    fn test_navigation_hierarchy_backwards_progression() {
+        let mut app = App::new();
+        app.name_prompt = None;
+
+        // 1. From MainMenu -> Touch Typing Academy (Index 0)
+        app.selected_menu_idx = 0;
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::CourseSelect);
+
+        // 2. From CourseSelect -> Course 1 (Enter)
+        app.selected_course_idx = 0;
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::LessonSelect);
+
+        // 3. From LessonSelect -> Lesson 1 (Enter)
+        app.selected_lesson_idx = 0;
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::TypingActive);
+        assert!(app.active_session.is_some());
+
+        // 4. In TypingActive, press Esc -> should return to LessonSelect!
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::LessonSelect);
+        assert!(app.active_session.is_none());
+
+        // 5. In LessonSelect, press Esc -> should return to CourseSelect!
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::CourseSelect);
+
+        // 6. In CourseSelect, press Esc -> should return to MainMenu!
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::MainMenu);
+
+        // 7. Results screen: finish an exercise, test Esc returns to LessonSelect
+        app.selected_menu_idx = 0;
+        app.handle_key_event(key(KeyCode::Enter)); // CourseSelect
+        app.handle_key_event(key(KeyCode::Enter)); // LessonSelect
+        app.handle_key_event(key(KeyCode::Enter)); // TypingActive
+        app.finish_active_session();
+        assert_eq!(app.screen, AppScreen::Results);
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::LessonSelect);
+
+        // 8. Speed Tests backward progression
+        app.screen = AppScreen::MainMenu;
+        app.selected_menu_idx = 1;
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::SpeedTestSelect);
+        app.handle_key_event(key(KeyCode::Char('1')));
+        assert_eq!(app.screen, AppScreen::TypingActive);
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::SpeedTestSelect);
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::MainMenu);
+
+        // 9. Targeted Review backward progression
+        app.selected_menu_idx = 2;
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::TargetedReview);
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::TypingActive);
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::TargetedReview);
         app.handle_key_event(key(KeyCode::Esc));
         assert_eq!(app.screen, AppScreen::MainMenu);
     }

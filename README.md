@@ -56,10 +56,11 @@
 | | `Esc` | Return to course selection |
 | **Typing Pane** | Printable Keys | Type expected characters (Green = Correct, Red = Error) |
 | | `Backspace` | Correct previous character |
-| | `Esc` | Abort session and return to menu |
+| | `Esc` | Abort session and return to previous screen (e.g. Lesson Select) |
 | **Scorecard** | `n` / `Enter` | Advance to next exercise / lesson |
 | | `r` | Retry current exercise |
-| | `m` / `Esc` | Return to main menu |
+| | `Esc` / `q` | Return to previous screen (e.g. Lesson Select) |
+| | `m` | Jump directly to main menu |
 | **Speed Tests** | `1`, `2`, `5` | Start 1-minute, 2-minute, or 5-minute typing test |
 | | `Esc` | Return to main menu |
 | **Targeted Review** | `Enter` / `p` | Generate dynamic targeted drill for weakest keys |
