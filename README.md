@@ -114,11 +114,11 @@ kktypr/
 │   └── ui/
 │       ├── mod.rs              # Frame router and overlay compositor
 │       ├── theme.rs            # Color tokens and styling rules
-│       ├── keyboard.rs         # Interactive box-drawn visual keyboard widget
+│       ├── keyboard.rs         # Interactive box drawn visual keyboard widget
 │       └── views/
 │           ├── menu_view.rs    # Main menu, course browser, lesson select & speed test select
-│           ├── lesson_view.rs  # Dual-mode typing stage (prose word-wrapping + key drills)
-│           ├── dashboard.rs    # Weak-key diagnostic reports & typist statistics
+│           ├── lesson_view.rs  # Dual mode typing stage (prose word wrapping + key drills)
+│           ├── dashboard.rs    # Weak key diagnostic reports & typist statistics
 │           ├── game_view.rs    # Word Drop arcade canvas & danger baseline
 │           ├── modal_view.rs   # Floating dialogs for typist profile creation/rename
 │           └── profile_view.rs # Profile manager view (switch, add, rename, delete)
