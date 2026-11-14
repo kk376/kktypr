@@ -60,6 +60,11 @@ impl WordDropGame {
         *self = Self::new(width, height);
     }
 
+    pub fn set_dimensions(&mut self, width: u16, height: u16) {
+        self.width = width.max(30);
+        self.height = height.max(12);
+    }
+
     pub fn spawn_word(&mut self) {
         if self.state != GameState::Playing {
             return;

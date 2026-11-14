@@ -55,7 +55,7 @@ fn main() -> io::Result<()> {
     }
 
     // Save profile state on exit
-    let _ = app.profile.save();
+    app.sync_and_save_profile();
 
     // Cleanly restore terminal
     disable_raw_mode()?;

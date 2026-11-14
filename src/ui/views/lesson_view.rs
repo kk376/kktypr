@@ -214,7 +214,7 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
 
     // 1. Instruction prompt banner
     let prompt_desc = if let Some(ex) = app.current_exercise() {
-        format!("▶ {}  |  {}", ex.title, ex.prompt)
+        format!("▶ {} • {}  |  {}", ex.exercise_type.display_name(), ex.title, ex.prompt)
     } else {
         "▶ Type each highlighted word and press space. Maintain steady rhythm.".to_string()
     };

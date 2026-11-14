@@ -14,7 +14,11 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         AppScreen::Results => views::lesson_view::render_results(app, frame),
         AppScreen::SpeedTestSelect => views::menu_view::render_speed_test_select(app, frame),
         AppScreen::TargetedReview => views::dashboard::render_targeted_review(app, frame),
-        AppScreen::WordDropGame => views::game_view::render_word_drop(app, frame),
+        AppScreen::WordDropGame => {
+            let area = frame.area();
+            app.game.set_dimensions(area.width, area.height.saturating_sub(5));
+            views::game_view::render_word_drop(app, frame);
+        }
         AppScreen::Stats => views::dashboard::render_stats(app, frame),
         AppScreen::ProfileManager => views::profile_view::render_profile_manager(app, frame),
     }

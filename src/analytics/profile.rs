@@ -79,6 +79,7 @@ impl UserProfile {
         }
     }
 
+    #[cfg_attr(test, allow(dead_code))]
     pub fn default_storage_path() -> PathBuf {
         if let Some(proj) = ProjectDirs::from("com", "kktypr", "kktypr") {
             let data_dir = proj.data_local_dir();
@@ -86,32 +87,6 @@ impl UserProfile {
         } else {
             PathBuf::from("profile.json")
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn load_or_default() -> Self {
-        let path = Self::default_storage_path();
-        if path.exists()
-            && let Ok(content) = fs::read_to_string(&path)
-                && let Ok(profile) = serde_json::from_str(&content) {
-                    return profile;
-                }
-        Self::default()
-    }
-
-    pub fn save(&self) -> Result<(), std::io::Error> {
-        let path = Self::default_storage_path();
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
-
-        // Atomic write: write to temp file then rename
-        let tmp_path = path.with_extension("tmp");
-        fs::write(&tmp_path, json)?;
-        fs::rename(&tmp_path, &path)?;
-        Ok(())
     }
 }
 
@@ -144,15 +119,6 @@ impl ProfileStore {
             .expect("ProfileStore must contain at least one profile")
     }
 
-    #[allow(dead_code)]
-    pub fn active_mut(&mut self) -> &mut UserProfile {
-        if let Some(idx) = self.profiles.iter().position(|p| p.name.eq_ignore_ascii_case(&self.active_name)) {
-            &mut self.profiles[idx]
-        } else {
-            &mut self.profiles[0]
-        }
-    }
-
     pub fn update_active(&mut self, profile: &UserProfile) {
         if let Some(idx) = self.profiles.iter().position(|p| p.name.eq_ignore_ascii_case(&self.active_name)) {
             self.profiles[idx] = profile.clone();
@@ -177,6 +143,9 @@ impl ProfileStore {
         if trimmed.is_empty() {
             return Err("Profile name cannot be blank.");
         }
+        if trimmed.chars().count() > 24 {
+            return Err("Profile name must be 24 characters or less.");
+        }
         if self.profiles.iter().any(|p| p.name.eq_ignore_ascii_case(trimmed)) {
             return Err("A profile with this name already exists.");
         }
@@ -190,6 +159,9 @@ impl ProfileStore {
         let trimmed = new_name.trim();
         if trimmed.is_empty() {
             return Err("Profile name cannot be blank.");
+        }
+        if trimmed.chars().count() > 24 {
+            return Err("Profile name must be 24 characters or less.");
         }
         if !old_name.eq_ignore_ascii_case(trimmed)
             && self.profiles.iter().any(|p| p.name.eq_ignore_ascii_case(trimmed))
@@ -224,6 +196,7 @@ impl ProfileStore {
         Ok(())
     }
 
+    #[cfg_attr(test, allow(dead_code))]
     pub fn storage_path() -> PathBuf {
         if let Some(proj) = ProjectDirs::from("com", "kktypr", "kktypr") {
             let data_dir = proj.data_local_dir();
@@ -234,39 +207,56 @@ impl ProfileStore {
     }
 
     pub fn load_or_default() -> Self {
-        let path = Self::storage_path();
-        if path.exists()
-            && let Ok(content) = fs::read_to_string(&path)
-            && let Ok(mut store) = serde_json::from_str::<ProfileStore>(&content)
+        #[cfg(test)]
         {
-            if store.profiles.is_empty() {
-                store = Self::default();
+            Self::default()
+        }
+        #[cfg(not(test))]
+        {
+            let path = Self::storage_path();
+            if path.exists()
+                && let Ok(content) = fs::read_to_string(&path)
+                && let Ok(mut store) = serde_json::from_str::<ProfileStore>(&content)
+            {
+                if store.profiles.is_empty() {
+                    store = Self::default();
+                }
+                store.is_first_run = false;
+                return store;
             }
-            store.is_first_run = false;
-            return store;
-        }
 
-        // Check legacy single-profile file
-        let legacy_path = UserProfile::default_storage_path();
-        if legacy_path.exists()
-            && let Ok(content) = fs::read_to_string(&legacy_path)
-            && let Ok(legacy_profile) = serde_json::from_str::<UserProfile>(&content)
-        {
-            let store = ProfileStore {
-                active_name: legacy_profile.name.clone(),
-                profiles: vec![legacy_profile],
-                is_first_run: false,
-            };
-            let _ = store.save();
-            return store;
-        }
+            // Check legacy single-profile file
+            let legacy_path = UserProfile::default_storage_path();
+            if legacy_path.exists()
+                && let Ok(content) = fs::read_to_string(&legacy_path)
+                && let Ok(legacy_profile) = serde_json::from_str::<UserProfile>(&content)
+            {
+                let store = ProfileStore {
+                    active_name: legacy_profile.name.clone(),
+                    profiles: vec![legacy_profile],
+                    is_first_run: false,
+                };
+                let _ = store.save();
+                return store;
+            }
 
-        // Clean first run
-        Self::default()
+            // Clean first run
+            Self::default()
+        }
     }
 
     pub fn save(&self) -> Result<(), std::io::Error> {
-        let path = Self::storage_path();
+        #[cfg(test)]
+        {
+            Ok(())
+        }
+        #[cfg(not(test))]
+        {
+            self.save_to_path(&Self::storage_path())
+        }
+    }
+
+    pub fn save_to_path(&self, path: &std::path::Path) -> Result<(), std::io::Error> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -275,7 +265,7 @@ impl ProfileStore {
 
         let tmp_path = path.with_extension("tmp");
         fs::write(&tmp_path, json)?;
-        fs::rename(&tmp_path, &path)?;
+        fs::rename(&tmp_path, path)?;
         Ok(())
     }
 }
@@ -323,9 +313,10 @@ mod tests {
         assert_eq!(store.active().name, "Kushagra");
         assert_eq!(store.profiles.len(), 2);
 
-        // Disallow duplicate names
+        // Disallow duplicate names or overly long names
         assert!(store.add_profile("kushagra").is_err());
         assert!(store.add_profile("").is_err());
+        assert!(store.add_profile("ThisNameIsWayTooLongForATypistProfile").is_err());
 
         // Switch profile
         assert!(store.switch_profile("Typist"));
@@ -342,5 +333,27 @@ mod tests {
 
         // Cannot delete only remaining profile
         assert!(store.delete_profile("Kushagra").is_err());
+    }
+
+    #[test]
+    fn test_profile_store_serialization_to_path() {
+        let mut store = ProfileStore::default();
+        store.add_profile("TestTypist").unwrap();
+
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join(format!("kktypr_test_{}.json", std::process::id()));
+
+        // Save
+        assert!(store.save_to_path(&test_file).is_ok());
+        assert!(test_file.exists());
+
+        // Read back
+        let content = fs::read_to_string(&test_file).unwrap();
+        let loaded: ProfileStore = serde_json::from_str(&content).unwrap();
+        assert_eq!(loaded.active().name, "TestTypist");
+        assert_eq!(loaded.profiles.len(), 2);
+
+        // Clean up
+        let _ = fs::remove_file(test_file);
     }
 }

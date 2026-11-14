@@ -610,6 +610,7 @@ mod tests {
     #[test]
     fn test_app_reset_stats_workflow() {
         let mut app = App::new();
+        app.name_prompt = None;
         app.profile.best_gross_wpm = 75.0;
         app.profile.total_sessions = 10;
         app.profile.completed_exercises.insert("basics:1:0".to_string());
