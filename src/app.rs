@@ -133,6 +133,20 @@ impl App {
             .and_then(|l| l.exercises.get(self.selected_exercise_idx))
     }
 
+    /// Finds the default step index to highlight in a lesson.
+    /// Returns the index of the first incomplete step (x + 1), or 0 if all steps are completed.
+    pub fn default_exercise_idx_for_lesson(&self, lesson_idx: usize) -> usize {
+        let course = self.current_course();
+        if let Some(lesson) = course.lessons.get(lesson_idx) {
+            for (idx, _) in lesson.exercises.iter().enumerate() {
+                if !self.profile.is_exercise_completed(&course.id, lesson.number, idx) {
+                    return idx;
+                }
+            }
+        }
+        0
+    }
+
     pub fn is_current_exercise_key_drill(&self) -> bool {
         if self.session_origin != AppScreen::LessonSelect {
             return false;
@@ -486,6 +500,7 @@ impl App {
             }
             KeyCode::Enter => {
                 self.selected_lesson_idx = 0;
+                self.selected_exercise_idx = self.default_exercise_idx_for_lesson(0);
                 self.screen = AppScreen::LessonSelect;
             }
             KeyCode::Esc | KeyCode::Char('q') => self.screen = AppScreen::MainMenu,
@@ -495,19 +510,44 @@ impl App {
 
     fn handle_lesson_select_key(&mut self, key: KeyEvent) {
         let total_lessons = self.current_course().lessons.len();
+        let total_steps = self
+            .current_course()
+            .lessons
+            .get(self.selected_lesson_idx)
+            .map(|l| l.exercises.len())
+            .unwrap_or(4);
+
         match key.code {
             KeyCode::Up | KeyCode::Char('k') => {
                 if self.selected_lesson_idx > 0 {
                     self.selected_lesson_idx -= 1;
+                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
                 }
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 if self.selected_lesson_idx + 1 < total_lessons {
                     self.selected_lesson_idx += 1;
+                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                }
+            }
+            KeyCode::Left | KeyCode::Char('h') | KeyCode::BackTab => {
+                if self.selected_exercise_idx > 0 {
+                    self.selected_exercise_idx -= 1;
+                }
+            }
+            KeyCode::Right | KeyCode::Char('l') | KeyCode::Tab => {
+                if self.selected_exercise_idx + 1 < total_steps {
+                    self.selected_exercise_idx += 1;
+                }
+            }
+            KeyCode::Char(c @ '1'..='9') => {
+                let step_num = c.to_digit(10).unwrap() as usize;
+                let step_idx = step_num.saturating_sub(1);
+                if step_idx < total_steps {
+                    self.selected_exercise_idx = step_idx;
                 }
             }
             KeyCode::Enter => {
-                self.selected_exercise_idx = 0;
                 self.start_current_exercise();
             }
             KeyCode::Esc | KeyCode::Char('q') => self.screen = AppScreen::CourseSelect,
@@ -557,10 +597,11 @@ impl App {
                                     self.start_current_exercise();
                                 } else if self.selected_lesson_idx + 1 < course.lessons.len() {
                                     self.selected_lesson_idx += 1;
-                                    self.selected_exercise_idx = 0;
+                                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
                                     self.start_current_exercise();
                                 } else {
                                     self.screen = AppScreen::LessonSelect;
+                                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
                                 }
                             }
                     }
@@ -571,6 +612,9 @@ impl App {
             }
             KeyCode::Esc | KeyCode::Char('q') => {
                 self.screen = self.session_origin;
+                if self.screen == AppScreen::LessonSelect {
+                    self.selected_exercise_idx = self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                }
             }
             KeyCode::Char('m') => {
                 self.screen = AppScreen::MainMenu;
@@ -824,5 +868,109 @@ mod tests {
         // 5. In Targeted Review: ALWAYS prose (words)
         app.start_targeted_drill();
         assert!(!app.is_current_exercise_key_drill());
+    }
+
+    #[test]
+    fn test_default_exercise_idx_first_incomplete_step() {
+        let mut app = App::new();
+        app.selected_course_idx = 0; // Course 1 ("basics")
+        let course_id = app.current_course().id.clone();
+
+        let lesson_12_idx = 11;
+        assert_eq!(app.default_exercise_idx_for_lesson(lesson_12_idx), 0);
+
+        let metrics = crate::engine::metrics::TypingMetrics::default();
+        // Complete step 1 (idx 0)
+        app.profile.record_exercise_completion(&course_id, 12, 0, &metrics);
+        assert_eq!(app.default_exercise_idx_for_lesson(lesson_12_idx), 1);
+
+        // Complete step 2 (idx 1) and step 3 (idx 2)
+        app.profile.record_exercise_completion(&course_id, 12, 1, &metrics);
+        app.profile.record_exercise_completion(&course_id, 12, 2, &metrics);
+        // With 3 steps completed, step 4 (idx 3) must be the default
+        assert_eq!(app.default_exercise_idx_for_lesson(lesson_12_idx), 3);
+
+        // Complete step 4 (idx 3) -> All completed, resets to step 1 (idx 0)
+        app.profile.record_exercise_completion(&course_id, 12, 3, &metrics);
+        assert_eq!(app.default_exercise_idx_for_lesson(lesson_12_idx), 0);
+    }
+
+    #[test]
+    fn test_lesson_select_step_navigation_and_esc_retention() {
+        let mut app = App::new();
+        app.name_prompt = None;
+        app.selected_course_idx = 0;
+        let course_id = app.current_course().id.clone();
+
+        let metrics = crate::engine::metrics::TypingMetrics::default();
+        // Complete 3 steps in Lesson 12
+        app.profile.record_exercise_completion(&course_id, 12, 0, &metrics);
+        app.profile.record_exercise_completion(&course_id, 12, 1, &metrics);
+        app.profile.record_exercise_completion(&course_id, 12, 2, &metrics);
+
+        // Enter LessonSelect and highlight Lesson 12
+        app.screen = AppScreen::LessonSelect;
+        app.selected_lesson_idx = 11;
+        app.selected_exercise_idx = app.default_exercise_idx_for_lesson(11);
+        assert_eq!(app.selected_exercise_idx, 3); // Step 4 auto-highlighted!
+
+        // Test step navigation with Left/Right arrows
+        app.handle_key_event(key(KeyCode::Left));
+        assert_eq!(app.selected_exercise_idx, 2); // Step 3
+        app.handle_key_event(key(KeyCode::Left));
+        assert_eq!(app.selected_exercise_idx, 1); // Step 2
+        app.handle_key_event(key(KeyCode::Right));
+        assert_eq!(app.selected_exercise_idx, 2); // Step 3
+
+        // Test direct digit selection (1-4)
+        app.handle_key_event(key(KeyCode::Char('1')));
+        assert_eq!(app.selected_exercise_idx, 0); // Step 1
+        app.handle_key_event(key(KeyCode::Char('4')));
+        assert_eq!(app.selected_exercise_idx, 3); // Step 4
+
+        // Press Enter to start Step 4
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::TypingActive);
+        assert_eq!(app.selected_exercise_idx, 3);
+
+        // While in Step 4, user presses Esc (e.g. phone call)
+        app.handle_key_event(key(KeyCode::Esc));
+        assert_eq!(app.screen, AppScreen::LessonSelect);
+        // Step 4 must remain selected!
+        assert_eq!(app.selected_exercise_idx, 3);
+
+        // Press Enter again: lands on Step 4!
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(app.screen, AppScreen::TypingActive);
+        assert_eq!(app.selected_exercise_idx, 3);
+    }
+
+    #[test]
+    fn test_lesson_select_changing_lesson_updates_default_step() {
+        let mut app = App::new();
+        app.name_prompt = None;
+        app.selected_course_idx = 0;
+        let course_id = app.current_course().id.clone();
+
+        let metrics = crate::engine::metrics::TypingMetrics::default();
+        // Complete 3 steps in Lesson 12
+        app.profile.record_exercise_completion(&course_id, 12, 0, &metrics);
+        app.profile.record_exercise_completion(&course_id, 12, 1, &metrics);
+        app.profile.record_exercise_completion(&course_id, 12, 2, &metrics);
+
+        app.screen = AppScreen::LessonSelect;
+        app.selected_lesson_idx = 11; // Lesson 12
+        app.selected_exercise_idx = app.default_exercise_idx_for_lesson(11);
+        assert_eq!(app.selected_exercise_idx, 3); // Step 4
+
+        // Press Up arrow to Lesson 11 (0 steps completed)
+        app.handle_key_event(key(KeyCode::Up));
+        assert_eq!(app.selected_lesson_idx, 10);
+        assert_eq!(app.selected_exercise_idx, 0); // Step 1
+
+        // Press Down arrow back to Lesson 12
+        app.handle_key_event(key(KeyCode::Down));
+        assert_eq!(app.selected_lesson_idx, 11);
+        assert_eq!(app.selected_exercise_idx, 3); // Step 4 automatically selected!
     }
 }

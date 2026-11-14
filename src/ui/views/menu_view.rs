@@ -209,10 +209,30 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
             let mut exercise_tags = Vec::new();
             for (ex_idx, _ex) in lesson.exercises.iter().enumerate() {
                 let completed = app.profile.is_exercise_completed(&course.id, lesson.number, ex_idx);
-                if completed {
-                    exercise_tags.push(Span::styled("[✓] ", Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD)));
+                let is_step_selected = is_selected && ex_idx == app.selected_exercise_idx;
+
+                if is_step_selected {
+                    if completed {
+                        exercise_tags.push(Span::styled(
+                            "[✓] ",
+                            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        ));
+                    } else {
+                        exercise_tags.push(Span::styled(
+                            "[▶] ",
+                            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        ));
+                    }
+                } else if completed {
+                    exercise_tags.push(Span::styled(
+                        "[✓] ",
+                        Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD),
+                    ));
                 } else {
-                    exercise_tags.push(Span::styled("[ ] ", Style::default().fg(Color::DarkGray)));
+                    exercise_tags.push(Span::styled(
+                        "[ ] ",
+                        Style::default().fg(Color::DarkGray),
+                    ));
                 }
             }
 
@@ -228,17 +248,47 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
         })
         .collect();
 
+    let step_display_num = app.selected_exercise_idx + 1;
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(format!(" {} (Enter: Start Lesson, Esc: Back) ", course.title))
+        .title(format!(
+            " {} (Enter: Start Step {}, ←/→ or 1-4: Select Step, Esc: Back) ",
+            course.title,
+            step_display_num
+        ))
         .title_alignment(Alignment::Center)
         .border_style(Style::default().fg(Theme::ACCENT));
 
     frame.render_widget(List::new(items).block(block), chunks[0]);
 
-    let help = Paragraph::new("Steps: Warm-Up → Word Drill → Sentence Drill → Mastery Test  |  Pass with 94%+ to certify")
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(Color::DarkGray));
+    let active_step_detail = course
+        .lessons
+        .get(app.selected_lesson_idx)
+        .and_then(|l| l.exercises.get(app.selected_exercise_idx))
+        .map(|ex| {
+            format!(
+                "▶ Step {}: {} • {} (Min Accuracy: {:.0}%)",
+                step_display_num,
+                ex.exercise_type.display_name(),
+                ex.title,
+                ex.minimum_accuracy
+            )
+        })
+        .unwrap_or_else(|| "Steps: Warm-Up → Word Drill → Sentence Drill → Mastery Test".to_string());
+
+    let help_lines = vec![
+        Line::from(vec![
+            Span::styled(active_step_detail, Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(vec![
+            Span::styled(
+                "Navigation: [↑/↓] Lesson  |  [←/→] or [1-4] Step  |  [Enter] Start Step  |  [Esc] Back",
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]),
+    ];
+
+    let help = Paragraph::new(help_lines).alignment(Alignment::Center);
     frame.render_widget(help, chunks[1]);
 }
 
