@@ -496,7 +496,7 @@ pub fn render_typing_active(app: &App, frame: &mut Frame) {
             .direction(Direction::Horizontal)
             .constraints([
                 Constraint::Percentage(74), // Left: Typing Stage & Keyboard
-                Constraint::Percentage(26), // Right: TypingMaster-style Progress Sidebar
+                Constraint::Percentage(26), // Right: Comprehensive Progress Sidebar
             ])
             .split(total_area);
 

@@ -1,150 +1,160 @@
-# kktypr ⚡
+# kktypr
 
-> Clean-room terminal touch-typing tutor and training engine written in **Rust 2024 Edition**. 
-> Pedagogically inspired by TypingMaster Pro mechanics with 100% original curriculum, dynamic weak-key diagnostics, multi-profile management, and an arcade falling-word game.
+> High performance terminal touch typing tutor and developer code syntax training engine written in **Rust**. Built on `ratatui` + `crossterm`.
+
+---
+
+## The USP
+
+Most typing software falls into two categories:
+1. **Web based casual tools** (like Monkeytype) that require a heavy web browser and primarily drill random English words rather than progressive muscle memory typing training.
+2. **Legacy desktop software** that is closed source, unmaintained, or requires proprietary GUI runtimes that don't fit into a terminal centric workflow.
+
+**kktypr** bridges this gap: a sub millisecond, native terminal user interface (TUI) combining professional touch typing training with real world developer syntax training (brackets, operators, generics, closures, and systems code) in a clean standalone binary.
 
 ---
 
 ## Highlights
 
-- **Pure Native Rust (Edition 2024)**: Built on `ratatui` + `crossterm`. Instant sub-millisecond input polling, zero windowing latency, 60 FPS delta-time game loop, and a standalone ~1.4MB release binary.
-- **Strict Clean-Room Architecture**: Zero proprietary code, zero reverse-engineering traps, and zero trademarked assets. All course texts, pangrams, and drills are original, public-domain, or developer-tailored.
-- **Authentic TypingMaster Block Stage**:
-  - Displays structured 8-word stationary blocks (4 words × 2 lines) so upcoming text remains fixed on screen.
-  - Active slot highlighted with `▶`, letter tracking cursor, and explicit `[␣ SPACE]` prompt at word boundaries.
-  - Moving cursor tracks typing position without disorienting text shifts.
-- **12-Lesson Progressive Academy**:
-  - *Phase 1*: Key Introduction (visual keyboard highlights & finger assignment)
-  - *Phase 2*: Warm-Up Drill (rhythmic muscle-memory repetition)
-  - *Phase 3*: Word Drill (real words utilizing learned keys)
-  - *Phase 4*: Sentence Drill (fluid natural prose)
-  - *Phase 5*: Lesson Mastery Test (1–2 minute timed certification with 94%+ accuracy thresholds)
-- **Developer Syntax Course**: Dedicated drills for coding punctuation: brackets `{}[]()`, arrows `->` `=>`, path operators `::`, semicolons, and language keywords.
-- **Interactive Terminal Keyboard**: Box-drawn Unicode keyboard with finger-zone color coding (Pinky, Ring, Middle, Index, Thumbs), active key glow, centered spacebar, and live finger placement guides.
-- **Typist Profile Manager & Multi-Profile Support**:
-  - First-run setup modal prompts for the typist's name.
-  - Switch between multiple typist profiles, register new profiles, or rename existing accounts.
-  - Reset stats option with high-contrast safety confirmation banner (`fg(Black).bg(Yellow)`) and deferred name prompt upon starting the next exercise.
-  - Atomic JSON persistence in standard XDG data directories (`~/.local/share/kktypr/profiles.json`) with automatic legacy migration.
-- **Pro Weak-Key Heatmap**: Tracks per-key accuracy and error matrices. Keys turn green (95%+), yellow (80–95%), or red (<80%) based on your lifetime error distribution.
-- **Targeted Practice Generator**: Automatically analyzes your weakest 3–5 keys and synthesizes focused drill sentences targeting those exact finger transitions.
-- **Word Drop Arcade Game**: TUI recreation of classic typing bubbles with falling word mechanics, dynamic terminal geometry adaptation, high-contrast target pills, combo streak multipliers, and high score tracking.
+- **Pure Native Rust**: Built from scratch with `ratatui` and `crossterm`. Zero web views, sub millisecond input response, 60 FPS delta time arcade physics, and a lightweight standalone binary.
+- **Dual-Mode Typing Stage**:
+  - **Natural Prose & Code Mode**: Continuous dynamic word wrapping to available terminal width. Words and code identifiers are never cut off or broken across lines. Features rolling multi line lookahead (preview upcoming lines in soft steel blue) and stationary 1 width cursor physics (letters never jitter or jump while typing).
+  - **Key Drill Mode**: Spaced key tokens (`a s d f`) dynamically grouped and packed onto lines to fit any terminal geometry with zero edge clipping.
+- **Course 1: Touch Typing Basics (12 Lessons, 48 Exercises)**:
+  - Structured 4 phase pedagogical progression:
+    - *Step 1: Warm-Up Drill* (finger reach & rhythm calibration)
+    - *Step 2: Word Drill* (real vocabulary using learned keys)
+    - *Step 3: Sentence Drill* (natural fluid English sentences)
+    - *Step 4: Mastery Test* (timed certification with 94%+ passing accuracy criteria)
+  - Progressive curriculum from Home Row (`asdf jkl;`) through vowels, reaches, punctuation, and capital letters.
+- **Course 2: Developer Syntax & Code Symbols (8 Lessons, 32 Exercises)**:
+  - Tailored specifically for programmers typing complex punctuation and code idioms:
+    - *Lesson 1: Brackets & Parens*: `() [] {}` (nested calls, array indexing, struct definitions)
+    - *Lesson 2: Arrows & Comparison*: `-> => <= >= == !=` (match guards, lambda arrows, compound logic)
+    - *Lesson 3: Semicolons, Colons & Path Operators*: `; : :: , .` (module use declarations, struct fields)
+    - *Lesson 4: Pipes, Ampersands & Bitwise*: `| || & && ! ~ ^` (bitmasking, boolean conditions, match pipes)
+    - *Lesson 5: Quotes, Strings & Regex Tokens*: `" ' ` \ / $` (interpolated templates, escape sequences)
+    - *Lesson 6: Generics, Turbofish & Lifetimes*: `< > ::< > 'a &mut` (generic bounds, lifetime annotations)
+    - *Lesson 7: Async/Await & Functional Pipelines*: `? .map .filter .await` (error try operator, method chains)
+    - *Lesson 8: Systems Code Certification*: Idiomatic production systems syntax (unsafe pointer ops, thread joins)
+
+- **Interactive Speed Test Suite**:
+  - 1 Minute Sprint, 2 Minutes Standard Benchmark, and 5 Minutes Endurance Assessment.
+  - Interactive menu with smooth arrow (`↑`/`↓`) and Vim (`k`/`j`) navigation, direct number keys (`1`/`2`/`5`), and live duration badges.
+- **Universal Vim Navigation**: Full `h` / `j` / `k` / `l` / `q` navigation across Main Menu, Course Selection, Lesson Browser, Speed Tests, Profile Manager, and Statistics.
+- **Interactive Visual Keyboard**: Box drawn Unicode keyboard with finger zone color coding (Pinky, Ring, Middle, Index, Thumbs), active key glow, centered spacebar, and live finger placement guidance pills.
+- **Typist Profile Registry & Multi Profile Support**:
+  - Create, switch, rename, or delete multiple typist profiles.
+  - Atomic JSON persistence in standard XDG data directories (`~/.local/share/kktypr/profiles.json`) with automatic legacy data migration.
+- **Pro Weak Key Heatmap**: Key-by-key accuracy and error matrix. Visual color-coding (Green: ≥95%, Yellow: 80–94%, Red: <80%) highlights your exact weak fingers.
+- **Dynamic Targeted Drill Synthesizer**: Analyzes lifetime weak keys and generates focused drill sentences targeting your specific problematic transitions.
+- **Word Drop Arcade Game**: Real-time falling-word arcade mode with combo streak multipliers, danger floor baseline, dynamic terminal scaling, and local high-score tracking.
+- **Clean Room Standard**: 100% original Rust code, public domain prose, and original developer exercises. Zero trademarked assets or proprietary code traps.
 
 ---
 
-## Navigation & Controls
+## Keyboard Controls & Shortcuts
 
-| Screen | Keybindings | Action |
+| Context | Keybindings | Action |
 |---|---|---|
-| **Global** | `Ctrl + C` | Force quit application safely |
+| **Global** | `Ctrl + C` | Force quit safely |
 | **Main Menu** | `↑` / `k`, `↓` / `j` | Navigate menu items |
-| | `Enter` | Select menu option |
+| | `Enter` / `l` | Select highlighted option |
 | | `r` | Quick trigger stats reset confirmation |
-| | `q` / `Esc` | Exit application |
-| **Name Prompt Modal** | Alphanumeric, `-`, `_` | Type typist name (max 24 characters) |
-| | `Backspace` | Erase character |
-| | `Enter` | Confirm and proceed |
-| | `Esc` | Cancel / use default 'Typist' |
-| **Profile Manager** | `↑` / `k`, `↓` / `j` | Browse typist profiles |
-| | `Enter` | Switch active profile |
-| | `a` | Create new profile |
+| | `q` / `Esc` | Quit application |
+| **Course Select** | `↑` / `k`, `↓` / `j` | Choose Course 1 (Basics) or Course 2 (Developer) |
+| | `Enter` / `l` | Open course curriculum |
+| | `Esc` / `q` / `h` | Return to Main Menu |
+| **Lesson Select** | `↑` / `k`, `↓` / `j` | Browse lessons (auto-highlights next incomplete step) |
+| | `←` / `h`, `→` / `l` | Select specific step within the lesson (Steps 1–4) |
+| | `1`, `2`, `3`, `4` | Direct jump to step |
+| | `Enter` | Start highlighted step |
+| | `Esc` / `q` | Return to course selection |
+| **Typing Stage** | Printable Characters | Type target characters (Green = Correct, Red = Error) |
+| | `Backspace` | Undo previous character |
+| | `Esc` | Pause / return to Lesson Select (retains active step) |
+| **Scorecard** | `n` / `Enter` | Advance to next step or lesson |
+| | `r` | Retry exercise |
+| | `Esc` / `q` / `h` | Return to lesson selector |
+| | `m` | Return directly to Main Menu |
+| **Speed Tests** | `↑` / `k`, `↓` / `j` | Navigate duration (1 min, 2 min, 5 min) |
+| | `Enter` / `l` | Start selected test |
+| | `1`, `2`, `5` | Direct duration launch |
+| | `Esc` / `q` / `h` | Return to Main Menu |
+| **Profile Manager** | `↑` / `k`, `↓` / `j` | Browse profiles |
+| | `Enter` / `l` | Switch active profile |
+| | `a` | Add new profile |
 | | `r` | Rename selected profile |
-| | `d` | Delete selected profile (safeguarded) |
-| | `Esc` / `q` | Return to Main Menu |
-| **Lesson Select** | `↑` / `k`, `↓` / `j` | Browse 12 progressive lessons |
-| | `Enter` | Start selected lesson |
-| | `Esc` | Return to course selection |
-| **Typing Pane** | Printable Keys | Type expected characters (Green = Correct, Red = Error) |
-| | `Backspace` | Correct previous character |
-| | `Esc` | Abort session and return to previous screen (e.g. Lesson Select) |
-| **Scorecard** | `n` / `Enter` | Advance to next exercise / lesson |
-| | `r` | Retry current exercise |
-| | `Esc` / `q` | Return to previous screen (e.g. Lesson Select) |
-| | `m` | Jump directly to main menu |
-| **Speed Tests** | `1`, `2`, `5` | Start 1-minute, 2-minute, or 5-minute typing test |
-| | `Esc` | Return to main menu |
-| **Targeted Review** | `Enter` / `p` | Generate dynamic targeted drill for weakest keys |
-| | `Esc` | Return to main menu |
-| **Word Drop Game** | Keys `a-z` | Type falling words to pop them before they breach the floor |
+| | `d` | Delete profile (safeguarded) |
+| | `Esc` / `q` / `h` | Return to Main Menu |
+| **Word Drop Game** | `a`–`z` | Type falling words to pop them before they hit the floor |
 | | `r` (Game Over) | Play again |
-| | `Esc` | Exit game to main menu |
+| | `Esc` | Return to Main Menu |
 
 ---
 
-## Architectural Layout
+## Architecture
 
 ```text
 kktypr/
 ├── Cargo.toml                  # Rust 2024 edition, ratatui 0.30, crossterm 0.29
 ├── src/
-│   ├── main.rs                 # Terminal setup, raw mode, panic hook, 60 FPS event loop
-│   ├── app.rs                  # Application state controller, screen router, key dispatch
+│   ├── main.rs                 # Terminal raw mode initialization, panic hook, 60 FPS event loop
+│   ├── app.rs                  # Application state controller, screen router, key event dispatch
 │   ├── engine/
-│   │   ├── mod.rs
 │   │   ├── session.rs          # TypingSession state machine and backspace support
-│   │   ├── metrics.rs          # Standardized Gross/Net WPM and accuracy calculations
-│   │   └── curriculum.rs       # 12-Lesson Course, Developer Special & drill models
+│   │   ├── metrics.rs          # Gross WPM, Net WPM, accuracy, and keystroke metrics
+│   │   └── curriculum.rs       # Course 1 (Basics: 12 Lessons), Course 2 (Developer: 8 Lessons)
 │   ├── analytics/
-│   │   ├── mod.rs
-│   │   ├── heatmap.rs          # Key-by-key accuracy & error frequency matrices
-│   │   ├── targeted.rs         # Dynamic weak-key practice drill synthesizer
+│   │   ├── heatmap.rs          # Per-key accuracy and error frequency matrices
+│   │   ├── targeted.rs         # Algorithmic weak-key drill generator
 │   │   └── profile.rs          # Multi-profile registry and atomic JSON storage
 │   ├── game/
-│   │   ├── mod.rs
 │   │   └── word_drop.rs        # Terminal falling-word arcade physics loop
 │   └── ui/
 │       ├── mod.rs              # Frame router and overlay compositor
-│       ├── theme.rs            # Terminal color tokens & styling rules
+│       ├── theme.rs            # Color tokens and styling rules
 │       ├── keyboard.rs         # Interactive box-drawn visual keyboard widget
 │       └── views/
-│           ├── mod.rs
-│           ├── menu_view.rs    # Main menu, course and lesson browsers
-│           ├── lesson_view.rs  # Block typing stage, HUD, and scorecards
+│           ├── menu_view.rs    # Main menu, course browser, lesson select & speed test select
+│           ├── lesson_view.rs  # Dual-mode typing stage (prose word-wrapping + key drills)
 │           ├── dashboard.rs    # Weak-key diagnostic reports & typist statistics
 │           ├── game_view.rs    # Word Drop arcade canvas & danger baseline
 │           ├── modal_view.rs   # Floating dialogs for typist profile creation/rename
-│           └── profile_view.rs # Profile Manager view (switch, add, rename, delete)
+│           └── profile_view.rs # Profile manager view (switch, add, rename, delete)
 ```
 
 ---
 
-## Building & Running
+## Building & Installation
 
-### Requirements
-- Rust 1.85+ (Rust 2024 edition)
-- Any standard Linux/macOS terminal with UTF-8 support (Ghostty, Foot, Kitty, Alacritty, GNOME Terminal)
+### Prerequisites
+- **Rust 1.85+** (Rust 2024 Edition)
+- Standard terminal emulator with UTF-8 support (Ghostty, Foot, Alacritty, Kitty, WezTerm, GNOME Terminal)
 
-### Commands
+### Build from source
 ```bash
-# Run in development mode
-cargo run
+# Clone the repository
+git clone https://github.com/kk376/kktypr.git
+cd kktypr
 
-# Run unit tests (100% pass)
+# Run test suite
 cargo test
-
-# Check linting and idioms
-cargo clippy --all-targets
 
 # Build optimized release binary
 cargo build --release
 
-# Run release binary
+# Run kktypr
 ./target/release/kktypr
 ```
 
 ---
 
-## Clean-Room Pedagogical Design
-
-| Dimension | Implementation Standard |
-|---|---|
-| **Curriculum** | 100% original sentences and code drills; zero copied or trademarked lessons. |
-| **Input Physics** | Real-time delta-time event polling with zero-latency keystroke feedback. |
-| **Error Handling** | Atomic writes via temporary files prevent JSON corruption during sudden disconnects. |
-| **Test Suite** | Comprehensive unit tests for metrics, session lifecycles, profile CRUD, and curriculum completeness. |
-
----
-
 ## License
 
-Open-sourced under the [MIT License](LICENSE).
+This project is dual-licensed under either:
+
+- **MIT License** ([LICENSE-MIT](LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
+- **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
+
+at your option.

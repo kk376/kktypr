@@ -1,4 +1,4 @@
-/// Represents the pedagogical stage of a lesson, mirroring Typing Master Pro progression.
+/// Represents the pedagogical stage of a progressive touch-typing lesson.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ExerciseType {
     WarmUp,
