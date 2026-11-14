@@ -155,6 +155,14 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
         .split(frame.area());
 
     let course = app.current_course();
+    let max_title_len = course
+        .lessons
+        .iter()
+        .map(|l| l.title.chars().count())
+        .max()
+        .unwrap_or(44)
+        .max(46);
+
     let items: Vec<ListItem> = course
         .lessons
         .iter()
@@ -177,9 +185,10 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
                 }
             }
 
+            let formatted_title = format!("Lesson {:2}: {:<width$}  ", lesson.number, lesson.title, width = max_title_len);
             let mut line_spans = vec![
                 Span::styled(prefix, style),
-                Span::styled(format!("Lesson {:2}: {:<42} ", lesson.number, lesson.title), style),
+                Span::styled(formatted_title, style),
                 Span::styled("Steps: ", Style::default().fg(Color::DarkGray)),
             ];
             line_spans.extend(exercise_tags);

@@ -10,6 +10,10 @@ use crate::engine::session::CharStatus;
 use crate::ui::keyboard::{get_finger_for_char, KeyboardWidget};
 use crate::ui::theme::Theme;
 
+const WORDS_PER_LINE: usize = 4;
+const LINES_PER_BLOCK: usize = 2;
+const WORDS_PER_BLOCK: usize = WORDS_PER_LINE * LINES_PER_BLOCK; // 8 words per block
+
 #[derive(Debug, Clone)]
 struct TargetWord<'a> {
     text: &'a str,
@@ -56,6 +60,114 @@ fn extract_words(text: &str) -> Vec<TargetWord<'_>> {
     words
 }
 
+fn format_spaced(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() * 2);
+    for (i, c) in text.chars().enumerate() {
+        if i > 0 {
+            out.push(' ');
+        }
+        out.push(c);
+    }
+    out
+}
+
+fn render_word_slot(
+    word: &TargetWord<'_>,
+    word_idx: usize,
+    active_word_idx: usize,
+    cursor: usize,
+    statuses: &[CharStatus],
+    slot_width: usize,
+    is_spaced_letters: bool,
+) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+
+    if word_idx < active_word_idx {
+        // Completed word in this block
+        spans.push(Span::styled("✓ ", Style::default().fg(Theme::SUCCESS)));
+        let word_display = if is_spaced_letters {
+            format_spaced(word.text)
+        } else {
+            word.text.to_string()
+        };
+        let formatted = format!("{:<width$}", word_display, width = slot_width.saturating_sub(2));
+        spans.push(Span::styled(formatted, Style::default().fg(Color::DarkGray)));
+    } else if word_idx == active_word_idx {
+        // Active word: stationary slot with prominent cursor tracking
+        spans.push(Span::styled("▶ ", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)));
+        let mut rendered_chars_count = 2; // for "▶ "
+
+        let is_at_trailing_space = cursor >= word.char_end && word.has_trailing_space;
+
+        for (offset, c) in word.text.chars().enumerate() {
+            let global_idx = word.char_start + offset;
+            let char_str = if is_spaced_letters { format!("{} ", c) } else { c.to_string() };
+            rendered_chars_count += char_str.chars().count();
+
+            if global_idx < cursor {
+                match statuses.get(global_idx).copied().unwrap_or(CharStatus::Pending) {
+                    CharStatus::Correct => {
+                        spans.push(Span::styled(
+                            char_str,
+                            Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD),
+                        ));
+                    }
+                    CharStatus::Incorrect => {
+                        spans.push(Span::styled(
+                            char_str,
+                            Style::default().fg(Color::White).bg(Theme::ERROR).add_modifier(Modifier::BOLD),
+                        ));
+                    }
+                    CharStatus::Pending => {
+                        spans.push(Span::styled(char_str, Style::default().fg(Color::White)));
+                    }
+                }
+            } else if global_idx == cursor {
+                // Inverted highlighted cursor block
+                spans.push(Span::styled(
+                    char_str,
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                ));
+            } else {
+                spans.push(Span::styled(
+                    char_str,
+                    Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                ));
+            }
+        }
+
+        // Highlight trailing space indicator if waiting for spacebar
+        if is_at_trailing_space {
+            spans.push(Span::styled(
+                "[␣]",
+                Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD),
+            ));
+            rendered_chars_count += 3;
+        }
+
+        // Pad slot with spaces to maintain fixed column alignment for subsequent words
+        let pad_len = slot_width.saturating_sub(rendered_chars_count);
+        if pad_len > 0 {
+            spans.push(Span::raw(" ".repeat(pad_len)));
+        }
+    } else {
+        // Upcoming word in this block
+        spans.push(Span::raw("  "));
+        let word_display = if is_spaced_letters {
+            format_spaced(word.text)
+        } else {
+            word.text.to_string()
+        };
+        let formatted = format!("{:<width$}", word_display, width = slot_width.saturating_sub(2));
+        spans.push(Span::styled(formatted, Style::default().fg(Color::LightCyan)));
+    }
+
+    spans
+}
+
 pub fn render_typing_active(app: &App, frame: &mut Frame) {
     if app.active_session.is_none() {
         return;
@@ -98,7 +210,7 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3), // Instruction header
-            Constraint::Length(9), // Large, structured Typing Stage (TypingMaster style)
+            Constraint::Length(9), // Large, structured Block Typing Stage
             Constraint::Length(10), // Centered interactive keyboard
             Constraint::Min(3),    // Finger Guide Pill
         ])
@@ -123,10 +235,11 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
     );
     frame.render_widget(instruction_p, chunks[0]);
 
-    // 2. The Structured Typing Stage
+    // 2. The Structured Block Typing Stage (Fixed positions, no treadmill shifting)
     let words = extract_words(&session.target_text);
     let cursor = session.cursor();
     let statuses = session.char_statuses();
+    let total_words = words.len().max(1);
 
     // Determine which word is currently active
     let mut active_word_idx = 0;
@@ -139,96 +252,73 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
             active_word_idx = idx + 1;
         }
     }
-    active_word_idx = active_word_idx.min(words.len().saturating_sub(1));
+    active_word_idx = active_word_idx.min(total_words.saturating_sub(1));
 
-    // Build the Active Display Lines
-    let mut stage_lines = Vec::new();
-    stage_lines.push(Line::from("")); // Top breathing room
+    // Page / Block calculations
+    let current_block_idx = active_word_idx / WORDS_PER_BLOCK;
+    let total_blocks = total_words.div_ceil(WORDS_PER_BLOCK);
+    let block_start = current_block_idx * WORDS_PER_BLOCK;
+    let block_end = (block_start + WORDS_PER_BLOCK).min(total_words);
+    let block_words = &words[block_start..block_end];
 
-    // Line 1: Previous completed words (dimmed green)
-    if active_word_idx > 0 {
-        let prev_start = active_word_idx.saturating_sub(3);
-        let mut prev_spans = Vec::new();
-        prev_spans.push(Span::raw("    "));
-        for w in &words[prev_start..active_word_idx] {
-            prev_spans.push(Span::styled(format!("✓ {}      ", w.text), Style::default().fg(Color::DarkGray)));
-        }
-        stage_lines.push(Line::from(prev_spans));
+    // Determine slot width and spaced letters based on longest word in current block
+    let max_word_len = block_words.iter().map(|w| w.text.chars().count()).max().unwrap_or(4);
+    let is_spaced_letters = max_word_len <= 5;
+    let slot_width = if is_spaced_letters {
+        (max_word_len * 2 + 6).max(18)
     } else {
-        stage_lines.push(Line::from(Span::styled("    [ Beginning of Exercise ]", Style::default().fg(Color::DarkGray))));
+        (max_word_len + 4).max(14)
+    };
+
+    // Build Line 1: words from block_start to min(block_start + 4, block_end)
+    let line1_end = (block_start + WORDS_PER_LINE).min(block_end);
+    let mut line1_spans = vec![Span::raw("    ")];
+    for (w_idx, w) in words.iter().enumerate().take(line1_end).skip(block_start) {
+        line1_spans.extend(render_word_slot(
+            w,
+            w_idx,
+            active_word_idx,
+            cursor,
+            statuses,
+            slot_width,
+            is_spaced_letters,
+        ));
     }
 
+    // Build Line 2: words from min(block_start + 4, block_end) to block_end
+    let line2_start = (block_start + WORDS_PER_LINE).min(block_end);
+    let mut line2_spans = vec![Span::raw("    ")];
+    if line2_start < block_end {
+        for (w_idx, w) in words.iter().enumerate().take(block_end).skip(line2_start) {
+            line2_spans.extend(render_word_slot(
+                w,
+                w_idx,
+                active_word_idx,
+                cursor,
+                statuses,
+                slot_width,
+                is_spaced_letters,
+            ));
+        }
+    }
+
+    let mut stage_lines = Vec::new();
     stage_lines.push(Line::from(""));
-
-    // Line 2: The Main Stage Line (Large spacing, active word with pointer)
-    let mut active_line_spans = Vec::new();
-    active_line_spans.push(Span::raw("  "));
-
-    // Render the active word with precise character formatting
-    if let Some(active_w) = words.get(active_word_idx) {
-        active_line_spans.push(Span::styled("▶ ", Style::default().fg(Theme::ACCENT).add_modifier(Modifier::BOLD)));
-
-        let is_at_trailing_space = cursor >= active_w.char_end && active_w.has_trailing_space;
-
-        for (char_offset, c) in active_w.text.chars().enumerate() {
-            let global_char_idx = active_w.char_start + char_offset;
-
-            if global_char_idx < cursor {
-                match statuses.get(global_char_idx).copied().unwrap_or(CharStatus::Pending) {
-                    CharStatus::Correct => {
-                        active_line_spans.push(Span::styled(c.to_string(), Style::default().fg(Theme::SUCCESS).add_modifier(Modifier::BOLD)));
-                    }
-                    CharStatus::Incorrect => {
-                        active_line_spans.push(Span::styled(c.to_string(), Style::default().fg(Color::White).bg(Theme::ERROR).add_modifier(Modifier::BOLD)));
-                    }
-                    CharStatus::Pending => {
-                        active_line_spans.push(Span::styled(c.to_string(), Style::default().fg(Color::White)));
-                    }
-                }
-            } else if global_char_idx == cursor {
-                // Inverted active cursor block
-                active_line_spans.push(Span::styled(
-                    c.to_string(),
-                    Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-                ));
-            } else {
-                active_line_spans.push(Span::styled(c.to_string(), Style::default().fg(Color::White).add_modifier(Modifier::BOLD)));
-            }
-        }
-
-        // Highlight trailing space prompt if waiting for space
-        if is_at_trailing_space {
-            active_line_spans.push(Span::styled(" ␣", Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD)));
-        }
-
-        active_line_spans.push(Span::raw("        ")); // 8 spaces between words
-
-        // Next 2 words on the active line
-        let next_start = active_word_idx + 1;
-        let next_end = (next_start + 3).min(words.len());
-        for w in &words[next_start..next_end] {
-            active_line_spans.push(Span::styled(format!("{}        ", w.text), Style::default().fg(Color::LightCyan)));
-        }
-    }
-
-    stage_lines.push(Line::from(active_line_spans));
+    stage_lines.push(Line::from(line1_spans));
     stage_lines.push(Line::from(""));
-
-    // Line 3: Lookahead preview row
-    let lookahead_start = (active_word_idx + 4).min(words.len());
-    let lookahead_end = (lookahead_start + 4).min(words.len());
-    if lookahead_start < words.len() {
-        let mut lookahead_spans = Vec::new();
-        lookahead_spans.push(Span::raw("    "));
-        for w in &words[lookahead_start..lookahead_end] {
-            lookahead_spans.push(Span::styled(format!("{}        ", w.text), Style::default().fg(Color::DarkGray)));
-        }
-        stage_lines.push(Line::from(lookahead_spans));
+    if line2_start < block_end {
+        stage_lines.push(Line::from(line2_spans));
+        stage_lines.push(Line::from(""));
     }
 
+    let stage_title = format!(
+        " Typing Stage  •  Block {} of {} ",
+        current_block_idx + 1,
+        total_blocks.max(1)
+    );
     let stage_block = Block::default()
         .borders(Borders::ALL)
-        .title(" Typing Stage ")
+        .title(stage_title)
         .title_alignment(Alignment::Center)
         .border_style(Style::default().fg(Theme::ACCENT));
 
@@ -248,13 +338,23 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
             ("Strike Key", Color::White)
         };
 
-        let target_disp = if target == ' ' { "SPACEBAR".to_string() } else { target.to_ascii_uppercase().to_string() };
+        let target_disp = if target == ' ' {
+            "SPACEBAR".to_string()
+        } else {
+            target.to_ascii_uppercase().to_string()
+        };
 
         let guide_spans = vec![
             Span::raw("  FINGER PLACEMENT:  "),
-            Span::styled(format!(" {} ", finger_name), Style::default().fg(Color::Black).bg(finger_color).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!(" {} ", finger_name),
+                Style::default().fg(Color::Black).bg(finger_color).add_modifier(Modifier::BOLD),
+            ),
             Span::raw("   ──►   Target Key: "),
-            Span::styled(format!(" [{}] ", target_disp), Style::default().fg(Color::Black).bg(Color::White).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!(" [{}] ", target_disp),
+                Style::default().fg(Color::Black).bg(Color::White).add_modifier(Modifier::BOLD),
+            ),
         ];
 
         let guide_p = Paragraph::new(Line::from(guide_spans))
@@ -453,5 +553,11 @@ mod tests {
         assert_eq!(words[2].char_start, 10);
         assert_eq!(words[2].char_end, 14);
         assert!(!words[2].has_trailing_space);
+    }
+
+    #[test]
+    fn test_format_spaced() {
+        assert_eq!(format_spaced("asdf"), "a s d f");
+        assert_eq!(format_spaced("a"), "a");
     }
 }
