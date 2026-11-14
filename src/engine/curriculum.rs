@@ -8,6 +8,7 @@ pub enum ExerciseType {
 }
 
 impl ExerciseType {
+    #[allow(dead_code)]
     pub fn display_name(&self) -> &'static str {
         match self {
             Self::WarmUp => "1. Warm-Up Drill",
