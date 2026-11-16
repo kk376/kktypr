@@ -147,6 +147,14 @@ Install directly from GitHub into `~/.cargo/bin`:
 cargo install --git https://github.com/kk376/kktypr
 ```
 
+Then run it from anywhere in your terminal:
+
+```bash
+kktypr
+```
+
+*(Ensure `~/.cargo/bin` is in your `$PATH`, which is configured automatically by `rustup`).*
+
 Or install from a local clone:
 
 ```bash
