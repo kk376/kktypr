@@ -1,16 +1,24 @@
 # kktypr
 
-> High performance terminal touch typing tutor and developer code syntax training engine written in **Rust**. Built on `ratatui` + `crossterm`.
+> High-performance terminal touch typing tutor and developer code syntax training engine in pure Rust. Built on `ratatui` + `crossterm`.
 
 ---
 
-## The USP
+## Why kktypr?
 
 Most typing software falls into two categories:
-1. **Web based casual tools** (like Monkeytype) that require a heavy web browser and primarily drill random English words rather than progressive muscle memory typing training.
-2. **Legacy desktop software** that is closed source, unmaintained, or requires proprietary GUI runtimes that don't fit into a terminal centric workflow.
+1. **Web-based casual tests** (like Monkeytype) that require a browser and primarily drill random English dictionary words rather than progressive muscle memory.
+2. **Legacy desktop software** with heavy graphical runtimes, proprietary paywalls, or zero terminal integration.
 
-**kktypr** bridges this gap: a sub millisecond, native terminal user interface (TUI) combining professional touch typing training with real world developer syntax training (brackets, operators, generics, closures, and systems code) in a clean standalone binary.
+**kktypr** is a keyboard training gym for developers. It bridges this gap with a sub-millisecond, native terminal user interface (TUI) combining structured touch typing fundamentals with real-world code syntax drills (brackets, lambda arrows, generics, turbofish, bitwise operators, and systems code) in a clean standalone binary.
+
+### The Deliberate Practice Loop
+
+1. **Learn the Reaches**: 12 touch typing lessons from home row to full punctuation with visual finger-zone guidance.
+2. **Build Code Muscle Memory**: 8 developer lessons drilling real-world programming syntax (`->`, `::<>`, `?`, `&mut`, `|`).
+3. **Diagnose Weak Keys**: Real-time accuracy and error frequency heatmap highlighting your slowest finger transitions.
+4. **Targeted Drills**: An algorithmic drill synthesizer that procedurally generates practice sentences targeting your specific weak keys.
+5. **Arcade Challenge**: 60 FPS falling-word arcade challenge ("Word Drop") testing word recognition and reaction speed under time pressure.
 
 ---
 
@@ -131,16 +139,21 @@ kktypr/
 
 ## Installation
 
-### Multi-OS Packages (Coming Soon)
+### Via Cargo (Recommended)
 
-Pre-built native packages and package manager repositories are coming soon for:
-- **Ubuntu / Debian / Linux Mint** (`.deb` / PPA)
-- **Fedora / RHEL / Rocky Linux** (`.rpm` / Copr)
-- **Arch Linux** (Pacman package)
-- **openSUSE** (OBS)
-- **macOS** (Homebrew tap)
-- **Windows** (Standalone portable `.zip` release)
-- **Static Linux** (`x86_64` and `aarch64` musl standalone static binaries)
+Install directly from GitHub into `~/.cargo/bin`:
+
+```bash
+cargo install --git https://github.com/kk376/kktypr
+```
+
+Or install from a local clone:
+
+```bash
+git clone https://github.com/kk376/kktypr.git
+cd kktypr
+cargo install --path .
+```
 
 ### Build from source
 
@@ -162,6 +175,17 @@ cargo build --release
 # Run kktypr
 ./target/release/kktypr
 ```
+
+### Multi-OS Packages (Packaging in Progress)
+
+Pre-built native packages and package manager repositories are being prepared for:
+- **Ubuntu / Debian / Linux Mint** (`.deb` / PPA)
+- **Fedora / RHEL / Rocky Linux** (`.rpm` / Copr)
+- **Arch Linux** (AUR / Pacman)
+- **openSUSE** (OBS)
+- **macOS** (Homebrew tap)
+- **Windows** (Scoop bucket / standalone zip)
+- **Static Linux** (`x86_64` and `aarch64` musl standalone static binaries)
 
 ---
 
