@@ -1,5 +1,8 @@
 # kktypr
 
+[![Crates.io Version](https://img.shields.io/crates/v/kktypr)](https://crates.io/crates/kktypr)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
+
 > High-performance terminal touch typing tutor and developer code syntax training engine in pure Rust. Built on `ratatui` + `crossterm`.
 
 <p align="center">
@@ -157,7 +160,13 @@ kktypr/
 
 ### Via Cargo (Recommended)
 
-Install directly from GitHub into `~/.cargo/bin`:
+Install directly from crates.io into `~/.cargo/bin`:
+
+```bash
+cargo install kktypr
+```
+
+Or install latest development version from GitHub:
 
 ```bash
 cargo install --git https://github.com/kk376/kktypr
