@@ -2,6 +2,10 @@
 
 > High-performance terminal touch typing tutor and developer code syntax training engine in pure Rust. Built on `ratatui` + `crossterm`.
 
+<p align="center">
+  <img src="screenshots/07-developer-syntax-drill.png" alt="kktypr Developer Syntax Practice Drill" width="100%">
+</p>
+
 ---
 
 ## Why kktypr?
@@ -19,6 +23,18 @@ Most typing software falls into two categories:
 3. **Diagnose Weak Keys**: Real-time accuracy and error frequency heatmap highlighting your slowest finger transitions.
 4. **Targeted Drills**: An algorithmic drill synthesizer that procedurally generates practice sentences targeting your specific weak keys.
 5. **Arcade Challenge**: 60 FPS falling-word arcade challenge ("Word Drop") testing word recognition and reaction speed under time pressure.
+
+---
+
+## Visual Tour
+
+| Interactive Keyboard & Syntax Drill | Real-Time Weak Key Diagnostics |
+| :---: | :---: |
+| ![Developer Syntax Drill](screenshots/07-developer-syntax-drill.png) | ![Weak Key Diagnostics](screenshots/10-weak-key-diagnostics.png) |
+| **Course 2: Developer Syntax & Code Symbols** | **Word Drop Arcade Mode** |
+| ![Course 2 Curriculum](screenshots/06-course2-developer-syntax.png) | ![Word Drop Arcade](screenshots/11-word-drop-arcade.png) |
+| **Retro-Modern Main Menu** | **Typist Lifetime Statistics & Heatmap** |
+| ![Main Menu](screenshots/01-main-menu.png) | ![Typist Statistics](screenshots/13-typist-statistics.png) |
 
 ---
 
