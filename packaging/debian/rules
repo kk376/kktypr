@@ -6,10 +6,6 @@ export DH_VERBOSE = 1
 	dh $@
 
 override_dh_auto_build:
-	sed -i -e 's/edition = "2024"/edition = "2021"/' -e '/rust-version/d' Cargo.toml
-	sed -i 's/^version = 4$$/version = 3/' Cargo.lock || true
-	find vendor -name Cargo.toml -exec sed -i -e 's/edition = "2024"/edition = "2021"/' -e '/rust-version/d' {} +
-	find vendor -name "*.rs" -exec sed -i 's/pub const fn height(&self)/pub fn height(&self)/g' {} +
 	cargo build --release --locked --offline
 
 override_dh_auto_test:
