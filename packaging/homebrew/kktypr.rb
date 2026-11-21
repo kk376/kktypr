@@ -6,7 +6,7 @@ class Kktypr < Formula
 
   on_macos do
     url "https://github.com/kk376/kktypr/archive/refs/tags/v0.2.0.tar.gz"
-    sha256 "40ee0e16f102d948868206be1d131c022da1491a1528a192c1c9ee11e72d3e36"
+    sha256 "7a13817bab89b2ea68ee9a398b61045a1d7f19dffeccf43c98a44b98546d745a"
     depends_on "rust" => :build
 
     def install
@@ -18,7 +18,7 @@ class Kktypr < Formula
 
   on_linux do
     url "https://github.com/kk376/kktypr/releases/download/v0.2.0/kktypr-0.2.0-x86_64-unknown-linux-gnu.tar.gz"
-    sha256 "5279d5ef2d70634e226a3fa21a82e2b16c01b698a50514c9c862153a336d8971"
+    sha256 "32bdb3b136b0c3da127cae8fb1fd907827f40e64592ea742f5644ff3837c0d6a"
 
     def install
       bin.install "kktypr"

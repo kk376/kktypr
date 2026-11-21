@@ -631,13 +631,13 @@ impl App {
                                     self.start_current_exercise();
                                 } else if self.selected_lesson_idx + 1 < course.lessons.len() {
                                     self.selected_lesson_idx += 1;
-                                    self.selected_exercise_idx =
-                                        self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                                    self.selected_exercise_idx = self
+                                        .default_exercise_idx_for_lesson(self.selected_lesson_idx);
                                     self.start_current_exercise();
                                 } else {
                                     self.screen = AppScreen::LessonSelect;
-                                    self.selected_exercise_idx =
-                                        self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                                    self.selected_exercise_idx = self
+                                        .default_exercise_idx_for_lesson(self.selected_lesson_idx);
                                 }
                             }
                         }
