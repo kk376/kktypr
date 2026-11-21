@@ -1,6 +1,6 @@
 pkgbase = kktypr
 	pkgdesc = A blazingly fast touch typing academy and developer syntax tutor for your terminal
-	pkgver = 0.1.1
+	pkgver = 0.2.0
 	pkgrel = 1
 	url = https://github.com/kk376/kktypr
 	arch = x86_64
@@ -10,7 +10,7 @@ pkgbase = kktypr
 	makedepends = cargo
 	makedepends = rust
 	depends = glibc
-	source = kktypr-0.1.1.tar.gz::https://github.com/kk376/kktypr/archive/refs/tags/v0.1.1.tar.gz
+	source = kktypr-0.2.0.tar.gz::https://github.com/kk376/kktypr/archive/refs/tags/v0.2.0.tar.gz
 	sha256sums = SKIP
 
 pkgname = kktypr

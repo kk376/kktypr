@@ -1,3 +1,11 @@
+kktypr (0.2.0-1) unstable; urgency=medium
+
+  * Release version 0.2.0: Multi-platform packaging parity and toolchain compatibility.
+  * Eliminate experimental let-chains and trim unused ratatui dependencies.
+  * Added native Ubuntu 26.04 LTS and openSUSE Leap 15.6 packaging support.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sun, 22 Nov 2026 02:30:00 +0530
+
 kktypr (0.1.1-1) unstable; urgency=medium
 
   * Release version 0.1.1.
