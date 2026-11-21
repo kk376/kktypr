@@ -35,8 +35,12 @@ python3 -c '
 import glob
 for path in glob.glob("vendor/**/*.rs", recursive=True):
     with open(path, "r") as f: content = f.read()
-    if "pub const fn height(&self)" in content:
-        content = content.replace("pub const fn height(&self)", "pub fn height(&self)")
+    orig = content
+    content = content.replace("pub const fn height(&self)", "pub fn height(&self)")
+    content = content.replace("pub const fn len(&self)", "pub fn len(&self)")
+    content = content.replace("pub const fn is_empty(&self)", "pub fn is_empty(&self)")
+    content = content.replace("if let Some(y) = layout.axis_x\n            && let Some(x) = layout.axis_y\n        {", "if let (Some(y), Some(x)) = (layout.axis_x, layout.axis_y) {")
+    if content != orig:
         with open(path, "w") as f: f.write(content)
 '
 %endif
