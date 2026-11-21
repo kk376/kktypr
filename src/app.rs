@@ -201,11 +201,12 @@ impl App {
                 self.profile.game_high_score = self.game.score;
                 self.sync_and_save_profile();
             }
-        } else if self.screen == AppScreen::TypingActive
-            && let Some(ref session) = self.active_session
-            && session.is_finished()
-        {
-            self.finish_active_session();
+        } else if self.screen == AppScreen::TypingActive {
+            if let Some(ref session) = self.active_session {
+                if session.is_finished() {
+                    self.finish_active_session();
+                }
+            }
         }
     }
 
@@ -223,15 +224,15 @@ impl App {
                 && self.selected_course_idx < self.courses.len()
             {
                 let course_id = self.current_course().id.clone();
-                if let Some(ex) = self.current_exercise()
-                    && metrics.accuracy_pct >= ex.minimum_accuracy
-                {
-                    self.profile.record_exercise_completion(
-                        &course_id,
-                        self.selected_lesson_idx + 1,
-                        self.selected_exercise_idx,
-                        &metrics,
-                    );
+                if let Some(ex) = self.current_exercise() {
+                    if metrics.accuracy_pct >= ex.minimum_accuracy {
+                        self.profile.record_exercise_completion(
+                            &course_id,
+                            self.selected_lesson_idx + 1,
+                            self.selected_exercise_idx,
+                            &metrics,
+                        );
+                    }
                 }
             } else {
                 self.profile.record_session_metrics(&metrics);
@@ -623,21 +624,21 @@ impl App {
                 match self.session_origin {
                     AppScreen::LessonSelect => {
                         // Advance to next exercise or lesson
-                        if let Some(course) = self.courses.get(self.selected_course_idx)
-                            && let Some(lesson) = course.lessons.get(self.selected_lesson_idx)
-                        {
-                            if self.selected_exercise_idx + 1 < lesson.exercises.len() {
-                                self.selected_exercise_idx += 1;
-                                self.start_current_exercise();
-                            } else if self.selected_lesson_idx + 1 < course.lessons.len() {
-                                self.selected_lesson_idx += 1;
-                                self.selected_exercise_idx =
-                                    self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
-                                self.start_current_exercise();
-                            } else {
-                                self.screen = AppScreen::LessonSelect;
-                                self.selected_exercise_idx =
-                                    self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                        if let Some(course) = self.courses.get(self.selected_course_idx) {
+                            if let Some(lesson) = course.lessons.get(self.selected_lesson_idx) {
+                                if self.selected_exercise_idx + 1 < lesson.exercises.len() {
+                                    self.selected_exercise_idx += 1;
+                                    self.start_current_exercise();
+                                } else if self.selected_lesson_idx + 1 < course.lessons.len() {
+                                    self.selected_lesson_idx += 1;
+                                    self.selected_exercise_idx =
+                                        self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                                    self.start_current_exercise();
+                                } else {
+                                    self.screen = AppScreen::LessonSelect;
+                                    self.selected_exercise_idx =
+                                        self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                                }
                             }
                         }
                     }

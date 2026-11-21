@@ -61,10 +61,10 @@ impl TypingSession {
         if self.cursor() >= self.target_chars.len() {
             return true;
         }
-        if let Some(limit) = self.time_limit
-            && self.elapsed() >= limit
-        {
-            return true;
+        if let Some(limit) = self.time_limit {
+            if self.elapsed() >= limit {
+                return true;
+            }
         }
         false
     }

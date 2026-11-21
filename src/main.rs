@@ -68,11 +68,12 @@ fn main() -> io::Result<()> {
         terminal.draw(|frame| ui::render(&mut app, frame))?;
 
         let timeout = tick_rate.saturating_sub(last_tick.elapsed());
-        if event::poll(timeout)?
-            && let Event::Key(key) = event::read()?
-            && key.kind == KeyEventKind::Press
-        {
-            app.handle_key_event(key);
+        if event::poll(timeout)? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    app.handle_key_event(key);
+                }
+            }
         }
 
         if last_tick.elapsed() >= tick_rate {

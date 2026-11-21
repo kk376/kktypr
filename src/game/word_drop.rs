@@ -140,19 +140,19 @@ impl WordDropGame {
         if let Some(target_idx) = self.targeted_word_idx {
             if target_idx < self.words.len() {
                 let word = &mut self.words[target_idx];
-                if let Some(expected) = word.text.chars().nth(word.typed_len)
-                    && expected == c
-                {
-                    word.typed_len += 1;
-                    if word.typed_len >= word.text.len() {
-                        // Word completed!
-                        let pts = (word.text.len() as u32 * 10) * (1 + self.streak / 5);
-                        self.score += pts;
-                        self.streak += 1;
-                        self.words.remove(target_idx);
-                        self.targeted_word_idx = None;
+                if let Some(expected) = word.text.chars().nth(word.typed_len) {
+                    if expected == c {
+                        word.typed_len += 1;
+                        if word.typed_len >= word.text.len() {
+                            // Word completed!
+                            let pts = (word.text.len() as u32 * 10) * (1 + self.streak / 5);
+                            self.score += pts;
+                            self.streak += 1;
+                            self.words.remove(target_idx);
+                            self.targeted_word_idx = None;
+                        }
+                        return true;
                     }
-                    return true;
                 }
             }
             // Mismatch resets streak and target

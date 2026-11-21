@@ -238,30 +238,32 @@ impl ProfileStore {
         #[cfg(not(test))]
         {
             let path = Self::storage_path();
-            if path.exists()
-                && let Ok(content) = fs::read_to_string(&path)
-                && let Ok(mut store) = serde_json::from_str::<ProfileStore>(&content)
-            {
-                if store.profiles.is_empty() {
-                    store = Self::default();
+            if path.exists() {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(mut store) = serde_json::from_str::<ProfileStore>(&content) {
+                        if store.profiles.is_empty() {
+                            store = Self::default();
+                        }
+                        store.is_first_run = false;
+                        return store;
+                    }
                 }
-                store.is_first_run = false;
-                return store;
             }
 
             // Check legacy single-profile file
             let legacy_path = UserProfile::default_storage_path();
-            if legacy_path.exists()
-                && let Ok(content) = fs::read_to_string(&legacy_path)
-                && let Ok(legacy_profile) = serde_json::from_str::<UserProfile>(&content)
-            {
-                let store = ProfileStore {
-                    active_name: legacy_profile.name.clone(),
-                    profiles: vec![legacy_profile],
-                    is_first_run: false,
-                };
-                let _ = store.save();
-                return store;
+            if legacy_path.exists() {
+                if let Ok(content) = fs::read_to_string(&legacy_path) {
+                    if let Ok(legacy_profile) = serde_json::from_str::<UserProfile>(&content) {
+                        let store = ProfileStore {
+                            active_name: legacy_profile.name.clone(),
+                            profiles: vec![legacy_profile],
+                            is_first_run: false,
+                        };
+                        let _ = store.save();
+                        return store;
+                    }
+                }
             }
 
             // Clean first run

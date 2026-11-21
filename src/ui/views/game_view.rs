@@ -139,10 +139,10 @@ pub fn render_word_drop(app: &App, frame: &mut Frame) {
                 };
 
                 // Left capsule padding
-                if start_col > playfield_area.left()
-                    && let Some(cell) = buf.cell_mut((start_col - 1, row))
-                {
-                    cell.set_char(' ').set_style(Style::default().bg(bubble_bg));
+                if start_col > playfield_area.left() {
+                    if let Some(cell) = buf.cell_mut((start_col - 1, row)) {
+                        cell.set_char(' ').set_style(Style::default().bg(bubble_bg));
+                    }
                 }
 
                 for (char_idx, c) in word.text.chars().enumerate() {
@@ -173,10 +173,10 @@ pub fn render_word_drop(app: &App, frame: &mut Frame) {
 
                 // Right capsule padding
                 let end_col = start_col + word.text.chars().count() as u16;
-                if end_col < playfield_area.right()
-                    && let Some(cell) = buf.cell_mut((end_col, row))
-                {
-                    cell.set_char(' ').set_style(Style::default().bg(bubble_bg));
+                if end_col < playfield_area.right() {
+                    if let Some(cell) = buf.cell_mut((end_col, row)) {
+                        cell.set_char(' ').set_style(Style::default().bg(bubble_bg));
+                    }
                 }
             }
         }
