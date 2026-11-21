@@ -31,12 +31,16 @@ cargo test --release --locked
 
 %install
 install -Dpm 0755 target/release/%{name} %{buildroot}%{_bindir}/%{name}
+if [ -f docs/%{name}.1 ]; then
+    install -Dpm 0644 docs/%{name}.1 %{buildroot}%{_mandir}/man1/%{name}.1
+fi
 install -Dpm 0644 README.md %{buildroot}%{_docdir}/%{name}/README.md
 
 %files
 %license LICENSE LICENSE-MIT LICENSE-APACHE
 %doc README.md
 %{_bindir}/%{name}
+%{_mandir}/man1/%{name}.1*
 
 %changelog
 * Sat Nov 21 2026 Kushagra Kumar (kk376) <kkushagra86@gmail.com> - 0.1.1-1

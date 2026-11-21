@@ -33,6 +33,7 @@ assets = [
     ["LICENSE", "usr/share/licenses/kktypr/LICENSE", "644"],
     ["LICENSE-MIT", "usr/share/licenses/kktypr/LICENSE-MIT", "644"],
     ["LICENSE-APACHE", "usr/share/licenses/kktypr/LICENSE-APACHE", "644"],
+    ["docs/kktypr.1", "usr/share/man/man1/kktypr.1", "644"],
 ]
 
 [package.metadata.generate-rpm]
@@ -42,6 +43,7 @@ assets = [
     { source = "LICENSE", dest = "/usr/share/licenses/kktypr/LICENSE", mode = "644" },
     { source = "LICENSE-MIT", dest = "/usr/share/licenses/kktypr/LICENSE-MIT", mode = "644" },
     { source = "LICENSE-APACHE", dest = "/usr/share/licenses/kktypr/LICENSE-APACHE", mode = "644" },
+    { source = "docs/kktypr.1", dest = "/usr/share/man/man1/kktypr.1", mode = "644" },
 ]
 
 [package.metadata.binstall]

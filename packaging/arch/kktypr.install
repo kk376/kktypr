@@ -1,0 +1,20 @@
+post_install() {
+    _cleanup_shadowed
+}
+
+post_upgrade() {
+    _cleanup_shadowed
+}
+
+_cleanup_shadowed() {
+    if [ -n "$SUDO_USER" ]; then
+        USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+        if [ -n "$USER_HOME" ]; then
+            for shadowed in "$USER_HOME/.cargo/bin/kktypr" "$USER_HOME/.local/bin/kktypr" "/usr/local/bin/kktypr"; do
+                if [ -f "$shadowed" ]; then
+                    rm -f "$shadowed" 2>/dev/null || true
+                fi
+            done
+        fi
+    fi
+}

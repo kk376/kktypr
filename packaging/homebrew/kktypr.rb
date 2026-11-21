@@ -11,6 +11,7 @@ class Kktypr < Formula
 
     def install
       system "cargo", "install", *std_cargo_args
+      man1.install "docs/kktypr.1" if File.exist?("docs/kktypr.1")
       doc.install "README.md" if File.exist?("README.md")
     end
   end
@@ -21,6 +22,7 @@ class Kktypr < Formula
 
     def install
       bin.install "kktypr"
+      man1.install "docs/kktypr.1" if File.exist?("docs/kktypr.1")
       doc.install "README.md" if File.exist?("README.md")
     end
   end

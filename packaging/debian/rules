@@ -14,6 +14,10 @@ override_dh_auto_test:
 override_dh_auto_install:
 	install -d debian/kktypr/usr/bin
 	install -m 0755 target/release/kktypr debian/kktypr/usr/bin/kktypr
+	install -d debian/kktypr/usr/share/man/man1
+	if [ -f docs/kktypr.1 ]; then \
+		gzip -9cn docs/kktypr.1 > debian/kktypr/usr/share/man/man1/kktypr.1.gz; \
+	fi
 	install -d debian/kktypr/usr/share/doc/kktypr
 	install -m 0644 README.md debian/kktypr/usr/share/doc/kktypr/README.md
 

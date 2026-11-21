@@ -5,6 +5,7 @@ set -euo pipefail
 PREFIX="${PREFIX:-/usr/local}"
 BIN_DIR="${PREFIX}/bin"
 SHARE_DIR="${PREFIX}/share"
+MANDIR="${SHARE_DIR}/man/man1"
 DOCDIR="${SHARE_DIR}/doc/kktypr"
 LICDIR="${SHARE_DIR}/licenses/kktypr"
 
@@ -45,11 +46,17 @@ fi
 
 # Create target directories
 echo "Installing to ${PREFIX}..."
-mkdir -p "${BIN_DIR}" "${DOCDIR}" "${LICDIR}"
+mkdir -p "${BIN_DIR}" "${MANDIR}" "${DOCDIR}" "${LICDIR}"
 
 # Install binary
 install -m 0755 "${SOURCE_BIN}" "${BIN_DIR}/kktypr"
 echo "  Installed ${BIN_DIR}/kktypr"
+
+# Install man page
+if [ -f "docs/kktypr.1" ]; then
+    install -m 0644 "docs/kktypr.1" "${MANDIR}/kktypr.1"
+    echo "  Installed man page to ${MANDIR}/kktypr.1"
+fi
 
 # Install documentation and licenses
 if [ -f "README.md" ]; then

@@ -15,4 +15,7 @@ post_install() {
 	vlicense LICENSE-MIT
 	vlicense LICENSE-APACHE
 	vdoc README.md
+	if [ -f docs/kktypr.1 ]; then
+		vman docs/kktypr.1
+	fi
 }

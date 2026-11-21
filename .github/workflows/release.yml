@@ -60,33 +60,63 @@ jobs:
           cp target/x86_64-unknown-linux-musl/release/kktypr dist/kktypr-linux-musl-x86_64
           chmod 755 dist/kktypr-linux-musl-x86_64
 
-          cp target/aarch64-unknown-linux-musl/release/kktypr dist/kktypr-linux-musl-aarch64
-          chmod 755 dist/kktypr-linux-musl-aarch64
+          cp target/aarch64-unknown-linux-musl/release/kktypr dist/kktypr-termux-arm64
+          chmod 755 dist/kktypr-termux-arm64
 
           # 2. Linux x86_64 Tarball (.tar.gz)
           TAR_DIR="kktypr-${VERSION}-x86_64-unknown-linux-gnu"
           mkdir -p "${TAR_DIR}"
           cp target/x86_64-unknown-linux-gnu/release/kktypr "${TAR_DIR}/kktypr"
-          cp README.md LICENSE "${TAR_DIR}/"
+          cp README.md LICENSE LICENSE-MIT LICENSE-APACHE "${TAR_DIR}/"
+          [ -f docs/kktypr.1 ] && cp docs/kktypr.1 "${TAR_DIR}/"
           tar -czf "dist/kktypr-${VERSION}-x86_64-unknown-linux-gnu.tar.gz" "${TAR_DIR}"
           rm -rf "${TAR_DIR}"
 
           # 3. Windows x86_64 Release Zip
           mkdir -p pkg-windows
           cp target/x86_64-pc-windows-gnu/release/kktypr.exe pkg-windows/
-          cp README.md LICENSE pkg-windows/
-          (cd pkg-windows && zip -r "../dist/kktypr-windows-x86_64.zip" kktypr.exe README.md LICENSE)
+          cp README.md LICENSE LICENSE-MIT LICENSE-APACHE pkg-windows/
+          (cd pkg-windows && zip -r "../dist/kktypr-windows-x86_64.zip" kktypr.exe README.md LICENSE LICENSE-MIT LICENSE-APACHE)
           rm -rf pkg-windows
 
-          # 4. Arch Linux Package (.pkg.tar.zst)
+          # 4. Android / Termux (.deb)
+          mkdir -p pkg-termux/data/data/com.termux/files/usr/bin pkg-termux/DEBIAN
+          cp target/aarch64-unknown-linux-musl/release/kktypr pkg-termux/data/data/com.termux/files/usr/bin/
+          cat <<EOF > pkg-termux/DEBIAN/control
+          Package: kktypr
+          Version: ${VERSION}-1
+          Architecture: aarch64
+          Maintainer: Kushagra Kumar (kk376) <kkushagra86@gmail.com>
+          Installed-Size: 1500
+          Section: utils
+          Priority: optional
+          Homepage: https://github.com/kk376/kktypr
+          Description: Terminal touch typing academy and developer code syntax trainer in pure Rust
+          EOF
+          dpkg-deb --build pkg-termux "dist/kktypr_${VERSION}-1_termux_aarch64.deb"
+          rm -rf pkg-termux
+
+          # 5. Debian Package (.deb)
+          cargo deb --target x86_64-unknown-linux-gnu --no-build
+          cp target/x86_64-unknown-linux-gnu/debian/*.deb dist/
+
+          # 6. RPM Package (.rpm)
+          cargo generate-rpm --target x86_64-unknown-linux-gnu
+          cp target/generate-rpm/*.rpm dist/ || cp target/x86_64-unknown-linux-gnu/generate-rpm/*.rpm dist/
+
+          # 7. Arch Linux Package (.pkg.tar.zst)
           PKGDIR="pkg-arch-build"
           mkdir -p "${PKGDIR}/usr/bin"
           mkdir -p "${PKGDIR}/usr/share/doc/kktypr"
           mkdir -p "${PKGDIR}/usr/share/licenses/kktypr"
+          mkdir -p "${PKGDIR}/usr/share/man/man1"
 
           cp target/x86_64-unknown-linux-gnu/release/kktypr "${PKGDIR}/usr/bin/kktypr"
           cp README.md "${PKGDIR}/usr/share/doc/kktypr/README.md"
           cp LICENSE "${PKGDIR}/usr/share/licenses/kktypr/LICENSE"
+          cp LICENSE-MIT "${PKGDIR}/usr/share/licenses/kktypr/LICENSE-MIT"
+          cp LICENSE-APACHE "${PKGDIR}/usr/share/licenses/kktypr/LICENSE-APACHE"
+          [ -f docs/kktypr.1 ] && cp docs/kktypr.1 "${PKGDIR}/usr/share/man/man1/kktypr.1"
           chmod 755 "${PKGDIR}/usr/bin/kktypr"
 
           SIZE=$(du -sb "${PKGDIR}" | awk '{print $1}')
@@ -104,20 +134,14 @@ jobs:
           arch = x86_64
           license = MIT
           depend = glibc
+          install = .INSTALL
           EOF
 
-          (cd "${PKGDIR}" && tar --zstd -cf "../dist/kktypr-${VERSION}-1-x86_64.pkg.tar.zst" .PKGINFO usr)
+          [ -f packaging/arch/kktypr.install ] && cp packaging/arch/kktypr.install "${PKGDIR}/.INSTALL"
+          (cd "${PKGDIR}" && tar --zstd -cf "../dist/kktypr-${VERSION}-1-x86_64.pkg.tar.zst" .PKGINFO .INSTALL usr)
           rm -rf "${PKGDIR}"
 
-          # 5. Debian Package (.deb)
-          cargo deb --target x86_64-unknown-linux-gnu --no-build
-          cp target/x86_64-unknown-linux-gnu/debian/*.deb dist/
-
-          # 6. RPM Package (.rpm)
-          cargo generate-rpm --target x86_64-unknown-linux-gnu
-          cp target/generate-rpm/*.rpm dist/ || cp target/x86_64-unknown-linux-gnu/generate-rpm/*.rpm dist/
-
-          # 7. Generate SHA256 checksums
+          # 8. Generate SHA256 checksums
           (cd dist && sha256sum * > SHA256SUMS.txt)
 
       - name: Publish GitHub Release
@@ -126,3 +150,50 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+  build-macos:
+    name: Build macOS Release Artifacts
+    runs-on: macos-latest
+    needs: [build-and-release]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build macOS binaries
+        run: |
+          cargo build --release --bin kktypr --target x86_64-apple-darwin
+          cargo build --release --bin kktypr --target aarch64-apple-darwin
+
+      - name: Package macOS artifacts
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "refs/heads/main" ]; then
+            VERSION="0.1.1"
+          else
+            VERSION="${TAG_NAME#v}"
+          fi
+          mkdir -p dist-macos
+
+          for TARGET in x86_64-apple-darwin aarch64-apple-darwin; do
+            DIR="kktypr-${VERSION}-${TARGET}"
+            mkdir -p "${DIR}"
+            cp "target/${TARGET}/release/kktypr" "${DIR}/"
+            cp README.md LICENSE LICENSE-MIT LICENSE-APACHE "${DIR}/"
+            [ -f docs/kktypr.1 ] && cp docs/kktypr.1 "${DIR}/"
+            tar -czf "dist-macos/kktypr-${VERSION}-${TARGET}.tar.gz" "${DIR}"
+            rm -rf "${DIR}"
+          done
+
+      - name: Upload macOS Release Artifacts
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist-macos/*

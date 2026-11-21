@@ -1,0 +1,59 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-formula:
+    name: Bump Homebrew Formula Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: kk376/homebrew-kktypr
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Download source tarball and compute SHA256
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_NAME#v}"
+          TARBALL_URL="https://github.com/kk376/kktypr/archive/refs/tags/${TAG_NAME}.tar.gz"
+          curl -sL "$TARBALL_URL" -o source.tar.gz
+          MACOS_SHA256=$(sha256sum source.tar.gz | awk '{print $1}')
+
+          LINUX_URL="https://github.com/kk376/kktypr/releases/download/${TAG_NAME}/kktypr-${VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+          curl -sL "$LINUX_URL" -o linux.tar.gz || true
+          LINUX_SHA256=$(sha256sum linux.tar.gz 2>/dev/null | awk '{print $1}' || echo "PENDING")
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "MACOS_SHA256=$MACOS_SHA256" >> $GITHUB_ENV
+          echo "LINUX_SHA256=$LINUX_SHA256" >> $GITHUB_ENV
+
+      - name: Update formula
+        if: hashFiles('homebrew-tap/Formula/kktypr.rb') != ''
+        run: |
+          cd homebrew-tap
+          sed -i "s/version \".*\"/version \"$VERSION\"/" Formula/kktypr.rb
+          sed -i "0,/sha256 \".*\"/s/sha256 \".*\"/sha256 \"$MACOS_SHA256\"/" Formula/kktypr.rb
+          sed -i "s|archive/refs/tags/v.*\.tar\.gz|archive/refs/tags/${TAG_NAME}.tar.gz|" Formula/kktypr.rb
+          sed -i "s|releases/download/v.*/kktypr-.*-x86_64-unknown-linux-gnu\.tar\.gz|releases/download/${TAG_NAME}/kktypr-${VERSION}-x86_64-unknown-linux-gnu.tar.gz|" Formula/kktypr.rb
+          if [ "$LINUX_SHA256" != "PENDING" ]; then
+            python3 -c "import re, os; f=open('Formula/kktypr.rb'); c=f.read(); f.close(); p=c.split('sha256'); len(p)>=3 and open('Formula/kktypr.rb','w').write('sha256'.join([p[0], p[1], re.sub(r'\"[a-f0-9A-Za-z]+\"', f'\"{os.environ[\"LINUX_SHA256\"]}\"', p[2], count=1)] + p[3:]))"
+          fi
+          sed -i "s/assert_match \"kktypr .*\"/assert_match \"kktypr $VERSION\"/" Formula/kktypr.rb
+
+      - name: Commit and push formula update
+        if: hashFiles('homebrew-tap/Formula/kktypr.rb') != ''
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/kktypr.rb
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "kktypr ${VERSION}"
+          git push

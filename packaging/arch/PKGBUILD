@@ -8,6 +8,7 @@ url="https://github.com/kk376/kktypr"
 license=('MIT' 'Apache-2.0')
 depends=('glibc')
 makedepends=('cargo' 'rust')
+install=kktypr.install
 source=("$pkgname-$pkgver.tar.gz::https://github.com/kk376/kktypr/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
@@ -24,6 +25,9 @@ check() {
 package() {
     cd "$pkgname-$pkgver"
     install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
+    if [ -f "docs/$pkgname.1" ]; then
+        install -Dm644 "docs/$pkgname.1" "$pkgdir/usr/share/man/man1/$pkgname.1"
+    fi
     install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
     install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
     install -Dm644 "LICENSE-MIT" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
