@@ -10,8 +10,8 @@ Source1:        vendor.tar.zst
 ExclusiveArch:  x86_64 aarch64
 
 %if 0%{?suse_version} < 1600
-BuildRequires:  cargo >= 1.75.0
-BuildRequires:  rust >= 1.75.0
+BuildRequires:  cargo1.85
+BuildRequires:  rust1.85
 %else
 BuildRequires:  cargo >= 1.88.0
 BuildRequires:  rust >= 1.88.0
