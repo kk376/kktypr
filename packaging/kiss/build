@@ -1,0 +1,9 @@
+#!/bin/sh -e
+
+cargo build \
+    --release \
+    --locked
+
+install -Dm755 target/release/kktypr "$1/usr/bin/kktypr"
+install -Dm644 README.md "$1/usr/share/doc/kktypr/README.md"
+install -Dm644 LICENSE "$1/usr/share/licenses/kktypr/LICENSE"

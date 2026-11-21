@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/kk376/kktypr"
 keywords = ["typing", "touch-typing", "tui", "terminal", "ratatui"]
 categories = ["command-line-utilities"]
-exclude = ["screenshots/", ".github/"]
+exclude = ["screenshots/", ".github/", "packaging/"]
 
 [dependencies]
 crossterm = "0.29.0"
@@ -19,6 +19,32 @@ rand = "0.10.4"
 ratatui = "0.30.2"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+
+[package.metadata.deb]
+maintainer = "Kushagra Kumar <kkushagra86@gmail.com>"
+copyright = "2026 Kushagra Kumar (kk376)"
+license-file = ["LICENSE-MIT", "4"]
+extended-description = "A blazingly fast touch typing academy and developer syntax tutor for your terminal"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/kktypr", "usr/bin/kktypr", "755"],
+    ["README.md", "usr/share/doc/kktypr/README.md", "644"],
+    ["LICENSE", "usr/share/licenses/kktypr/LICENSE", "644"],
+    ["LICENSE-MIT", "usr/share/licenses/kktypr/LICENSE-MIT", "644"],
+    ["LICENSE-APACHE", "usr/share/licenses/kktypr/LICENSE-APACHE", "644"],
+    ["docs/kktypr.1", "usr/share/man/man1/kktypr.1", "644"],
+]
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/kktypr", dest = "/usr/bin/kktypr", mode = "755" },
+    { source = "README.md", dest = "/usr/share/doc/kktypr/README.md", mode = "644", doc = true },
+    { source = "LICENSE", dest = "/usr/share/licenses/kktypr/LICENSE", mode = "644" },
+    { source = "LICENSE-MIT", dest = "/usr/share/licenses/kktypr/LICENSE-MIT", mode = "644" },
+    { source = "LICENSE-APACHE", dest = "/usr/share/licenses/kktypr/LICENSE-APACHE", mode = "644" },
+    { source = "docs/kktypr.1", dest = "/usr/share/man/man1/kktypr.1", mode = "644" },
+]
 
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }"

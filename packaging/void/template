@@ -1,0 +1,21 @@
+# Template file for 'kktypr'
+pkgname=kktypr
+version=0.1.1
+revision=1
+build_style=cargo
+short_desc="Terminal touch typing academy and developer code syntax trainer in pure Rust"
+maintainer="Kushagra Kumar (kk376) <kkushagra86@gmail.com>"
+license="MIT, Apache-2.0"
+homepage="https://github.com/kk376/kktypr"
+distfiles="https://github.com/kk376/kktypr/archive/refs/tags/v${version}.tar.gz"
+checksum=SKIP
+
+post_install() {
+	vlicense LICENSE
+	vlicense LICENSE-MIT
+	vlicense LICENSE-APACHE
+	vdoc README.md
+	if [ -f docs/kktypr.1 ]; then
+		vman docs/kktypr.1
+	fi
+}

@@ -1,0 +1,31 @@
+Source: kktypr
+Section: utils
+Priority: optional
+Maintainer: Kushagra Kumar <kkushagra86@gmail.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ cargo,
+ rustc,
+ libc6-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/kk376/kktypr
+Vcs-Git: https://github.com/kk376/kktypr.git
+Vcs-Browser: https://github.com/kk376/kktypr
+Rules-Requires-Root: no
+
+Package: kktypr
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends}
+Description: blazingly fast touch typing academy and syntax tutor for terminal
+ kktypr is a terminal-based touch typing tutor and developer code syntax
+ trainer written in pure Rust with Ratatui and Crossterm.
+ .
+ Features:
+  * Course 1: Comprehensive touch typing fundamentals (48 lessons)
+  * Course 2: Real-world developer code syntax drills (Rust, Python, TS, SQL, Bash)
+  * Stationary centered cursor ergonomics preventing eye strain
+  * Weak-key heatmap and targeted diagnostic drill generator
+  * High-refresh 60 FPS Word Drop arcade mode
+  * Atomic XDG state persistence

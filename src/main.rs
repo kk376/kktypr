@@ -14,7 +14,37 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io::{self, stdout};
 use std::time::{Duration, Instant};
 
+fn handle_cli_args<T: AsRef<str>>(args: &[T]) -> Option<bool> {
+    if args.len() > 1 {
+        match args[1].as_ref() {
+            "-v" | "--version" | "-V" => {
+                println!("kktypr {}", env!("CARGO_PKG_VERSION"));
+                Some(true)
+            }
+            "-h" | "--help" => {
+                println!("kktypr {}", env!("CARGO_PKG_VERSION"));
+                println!(
+                    "A blazingly fast touch typing academy and developer syntax tutor for your terminal\n"
+                );
+                println!("USAGE:\n    kktypr [OPTIONS]\n");
+                println!("OPTIONS:\n    -h, --help          Print help information");
+                println!("    -v, -V, --version   Print version information");
+                Some(true)
+            }
+            _ => None,
+        }
+    } else {
+        None
+    }
+}
+
 fn main() -> io::Result<()> {
+    // Quick non-interactive CLI argument handling
+    let args: Vec<String> = std::env::args().collect();
+    if handle_cli_args(&args).is_some() {
+        return Ok(());
+    }
+
     // Setup clean terminal panic hook
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
@@ -64,4 +94,28 @@ fn main() -> io::Result<()> {
     terminal.show_cursor()?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_handle_cli_args_version() {
+        assert_eq!(handle_cli_args(&["kktypr", "--version"]), Some(true));
+        assert_eq!(handle_cli_args(&["kktypr", "-v"]), Some(true));
+        assert_eq!(handle_cli_args(&["kktypr", "-V"]), Some(true));
+    }
+
+    #[test]
+    fn test_handle_cli_args_help() {
+        assert_eq!(handle_cli_args(&["kktypr", "--help"]), Some(true));
+        assert_eq!(handle_cli_args(&["kktypr", "-h"]), Some(true));
+    }
+
+    #[test]
+    fn test_handle_cli_args_passthrough() {
+        assert_eq!(handle_cli_args(&["kktypr"]), None);
+        assert_eq!(handle_cli_args(&["kktypr", "other"]), None);
+    }
 }
