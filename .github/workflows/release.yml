@@ -60,8 +60,8 @@ jobs:
           cp target/x86_64-unknown-linux-musl/release/kktypr dist/kktypr-linux-musl-x86_64
           chmod 755 dist/kktypr-linux-musl-x86_64
 
-          cp target/aarch64-unknown-linux-musl/release/kktypr dist/kktypr-termux-arm64
-          chmod 755 dist/kktypr-termux-arm64
+          cp target/aarch64-unknown-linux-musl/release/kktypr dist/kktypr-linux-musl-aarch64
+          chmod 755 dist/kktypr-linux-musl-aarch64
 
           # 2. Linux x86_64 Tarball (.tar.gz)
           TAR_DIR="kktypr-${VERSION}-x86_64-unknown-linux-gnu"
@@ -79,32 +79,15 @@ jobs:
           (cd pkg-windows && zip -r "../dist/kktypr-windows-x86_64.zip" kktypr.exe README.md LICENSE LICENSE-MIT LICENSE-APACHE)
           rm -rf pkg-windows
 
-          # 4. Android / Termux (.deb)
-          mkdir -p pkg-termux/data/data/com.termux/files/usr/bin pkg-termux/DEBIAN
-          cp target/aarch64-unknown-linux-musl/release/kktypr pkg-termux/data/data/com.termux/files/usr/bin/
-          cat <<EOF > pkg-termux/DEBIAN/control
-          Package: kktypr
-          Version: ${VERSION}-1
-          Architecture: aarch64
-          Maintainer: Kushagra Kumar (kk376) <kkushagra86@gmail.com>
-          Installed-Size: 1500
-          Section: utils
-          Priority: optional
-          Homepage: https://github.com/kk376/kktypr
-          Description: Terminal touch typing academy and developer code syntax trainer in pure Rust
-          EOF
-          dpkg-deb --build pkg-termux "dist/kktypr_${VERSION}-1_termux_aarch64.deb"
-          rm -rf pkg-termux
-
-          # 5. Debian Package (.deb)
+          # 4. Debian Package (.deb)
           cargo deb --target x86_64-unknown-linux-gnu --no-build
           cp target/x86_64-unknown-linux-gnu/debian/*.deb dist/
 
-          # 6. RPM Package (.rpm)
+          # 5. RPM Package (.rpm)
           cargo generate-rpm --target x86_64-unknown-linux-gnu
           cp target/generate-rpm/*.rpm dist/ || cp target/x86_64-unknown-linux-gnu/generate-rpm/*.rpm dist/
 
-          # 7. Arch Linux Package (.pkg.tar.zst)
+          # 6. Arch Linux Package (.pkg.tar.zst)
           PKGDIR="pkg-arch-build"
           mkdir -p "${PKGDIR}/usr/bin"
           mkdir -p "${PKGDIR}/usr/share/doc/kktypr"
@@ -141,7 +124,7 @@ jobs:
           (cd "${PKGDIR}" && tar --zstd -cf "../dist/kktypr-${VERSION}-1-x86_64.pkg.tar.zst" .PKGINFO .INSTALL usr)
           rm -rf "${PKGDIR}"
 
-          # 8. Generate SHA256 checksums
+          # 7. Generate SHA256 checksums
           (cd dist && sha256sum * > SHA256SUMS.txt)
 
       - name: Publish GitHub Release

@@ -236,7 +236,6 @@ Full package definitions, recipes, and build instructions are maintained in [`pa
 - **Gentoo**: [`packaging/gentoo/`](packaging/gentoo/)
 - **openSUSE**: [`packaging/opensuse/kktypr.spec`](packaging/opensuse/kktypr.spec)
 - **Windows (Scoop)**: [`packaging/scoop/kktypr.json`](packaging/scoop/kktypr.json)
-- **Android (Termux)**: [`packaging/termux/build.sh`](packaging/termux/build.sh)
 - **KISS Linux**: [`packaging/kiss/`](packaging/kiss/)
 
 ---

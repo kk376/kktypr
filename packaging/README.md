@@ -9,7 +9,6 @@ This directory contains distribution package definitions, build recipes, and met
 | **Arch Linux / AUR** | [`arch/PKGBUILD`](arch/PKGBUILD) | `makepkg` | `.pkg.tar.zst` |
 | **Debian / Ubuntu** | [`debian/`](debian/) | `dpkg-buildpackage` / `cargo-deb` | `.deb` |
 | **Fedora / RHEL / Copr** | [`rpm/kktypr.spec`](rpm/kktypr.spec) | `rpmbuild` / `cargo-generate-rpm` | `.rpm` |
-| **Android / Termux** | [`termux/build.sh`](termux/build.sh) | `termux-packages` | Termux `.deb` |
 | **Nix / NixOS** | [`nix/default.nix`](nix/default.nix), [`flake.nix`](../flake.nix) | `nix build` | Nix store path |
 | **Void Linux** | [`void/template`](void/template) | `xbps-src` | `.xbps` |
 | **Alpine Linux** | [`alpine/APKBUILD`](alpine/APKBUILD) | `abuild` | `.apk` |
