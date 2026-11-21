@@ -158,12 +158,12 @@ kktypr/
 
 ## Installation
 
-### Via Cargo (Recommended)
+### Via Cargo (Universal)
 
-Install directly from crates.io into `~/.cargo/bin`:
+Available directly on [crates.io](https://crates.io/crates/kktypr):
 
 ```bash
-cargo install kktypr
+cargo install kktypr --locked
 ```
 
 Or install pre-compiled binaries instantly via `cargo-binstall`:
@@ -172,35 +172,119 @@ Or install pre-compiled binaries instantly via `cargo-binstall`:
 cargo binstall kktypr
 ```
 
-Or install latest development version from GitHub:
+---
 
+### macOS & Linux (Homebrew)
+
+**Via Homebrew tap:**
 ```bash
-cargo install --git https://github.com/kk376/kktypr
+brew install kk376/kktypr/kktypr
 ```
+
+Or tap first:
+```bash
+brew tap kk376/kktypr
+brew install kktypr
+```
+
+---
+
+### Windows 10/11 (Scoop)
+
+**Via Scoop bucket:**
+```powershell
+scoop bucket add kktypr https://github.com/kk376/scoop-kktypr
+scoop install kktypr
+```
+
+Or install directly from manifest:
+```powershell
+scoop install https://raw.githubusercontent.com/kk376/scoop-kktypr/main/bucket/kktypr.json
+```
+
+---
+
+### Fedora / RHEL / Rocky Linux / AlmaLinux
+
+**Via Fedora Copr (Fedora 43, 44, 45, Rawhide, and EPEL 9/10 on x86_64 and aarch64):**
+```bash
+sudo dnf copr enable -y kk376/kktypr
+sudo dnf install -y kktypr
+```
+
+---
+
+### openSUSE (Tumbleweed)
+
+**Via Open Build Service (OBS):**
+```bash
+sudo zypper addrepo https://download.opensuse.org/repositories/home:/kk376/openSUSE_Tumbleweed/home:kk376.repo
+sudo zypper refresh
+sudo zypper install -y kktypr
+```
+
+---
+
+### Ubuntu / Debian Derivatives
+
+**Via Pre-built Debian Package:**
+```bash
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.1.1/kktypr_0.1.1-1_amd64.deb
+sudo dpkg -i kktypr_0.1.1-1_amd64.deb
+```
+
+---
+
+### Arch Linux / Manjaro / EndeavourOS
+
+**Via Pre-built Pacman Package:**
+```bash
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.1.1/kktypr-0.1.1-1-x86_64.pkg.tar.zst
+sudo pacman -U kktypr-0.1.1-1-x86_64.pkg.tar.zst
+```
+
+---
+
+### NixOS / Nix Flakes
+
+**Run instantly without installing:**
+```bash
+nix run github:kk376/kktypr
+```
+
+**Install to user profile via Flakes:**
+```bash
+nix profile install github:kk376/kktypr
+```
+
+---
+
+### Universal Static Musl Binaries (Zero Dependencies)
+
+**For x86_64 Linux:**
+```bash
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.1.1/kktypr-linux-musl-x86_64
+chmod +x kktypr-linux-musl-x86_64
+sudo mv kktypr-linux-musl-x86_64 /usr/local/bin/kktypr
+```
+
+**For aarch64 (ARM64) Linux:**
+```bash
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.1.1/kktypr-linux-musl-aarch64
+chmod +x kktypr-linux-musl-aarch64
+sudo mv kktypr-linux-musl-aarch64 /usr/local/bin/kktypr
+```
+
+---
 
 ### Universal POSIX Installer
 
 For automated environments, CI/CD runners, and quick setup:
-
 ```bash
 curl -sSL https://raw.githubusercontent.com/kk376/kktypr/main/install.sh | bash
 ```
 
-Then run it from anywhere in your terminal:
-
-```bash
-kktypr
-```
-
-*(Ensure `~/.cargo/bin` or `/usr/local/bin` is in your `$PATH`).*
-
-Or install from a local clone:
-
-```bash
-git clone https://github.com/kk376/kktypr.git
-cd kktypr
-cargo install --path .
-```
+---
 
 ### Build from source
 
@@ -229,13 +313,13 @@ Full package definitions, recipes, and build instructions are maintained in [`pa
 - **Arch Linux (AUR)**: [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) and root [`PKGBUILD`](PKGBUILD)
 - **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) and `cargo-deb`
 - **Fedora / RHEL / Copr**: [`packaging/rpm/kktypr.spec`](packaging/rpm/kktypr.spec) and `cargo-generate-rpm`
-- **Homebrew (macOS & Linux)**: [`packaging/homebrew/kktypr.rb`](packaging/homebrew/kktypr.rb)
+- **Homebrew (macOS & Linux)**: [`packaging/homebrew/kktypr.rb`](packaging/homebrew/kktypr.rb) and [`kk376/homebrew-kktypr`](https://github.com/kk376/homebrew-kktypr)
+- **Windows (Scoop)**: [`packaging/scoop/kktypr.json`](packaging/scoop/kktypr.json) and [`kk376/scoop-kktypr`](https://github.com/kk376/scoop-kktypr)
+- **openSUSE**: [`packaging/opensuse/kktypr.spec`](packaging/opensuse/kktypr.spec)
 - **Nix / NixOS**: Root [`flake.nix`](flake.nix) and [`packaging/nix/`](packaging/nix/)
 - **Alpine Linux**: [`packaging/alpine/APKBUILD`](packaging/alpine/APKBUILD)
 - **Void Linux**: [`packaging/void/template`](packaging/void/template)
 - **Gentoo**: [`packaging/gentoo/`](packaging/gentoo/)
-- **openSUSE**: [`packaging/opensuse/kktypr.spec`](packaging/opensuse/kktypr.spec)
-- **Windows (Scoop)**: [`packaging/scoop/kktypr.json`](packaging/scoop/kktypr.json)
 - **KISS Linux**: [`packaging/kiss/`](packaging/kiss/)
 
 ---
