@@ -6,10 +6,12 @@ License:        MIT OR Apache-2.0
 Group:          Development/Tools/Other
 URL:            https://github.com/kk376/kktypr
 Source0:        https://github.com/kk376/kktypr/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source1:        vendor.tar.zst
 ExclusiveArch:  x86_64 aarch64
 
 BuildRequires:  cargo >= 1.88.0
 BuildRequires:  rust >= 1.88.0
+BuildRequires:  zstd
 BuildRequires:  gcc
 
 %description
@@ -21,21 +23,34 @@ Word Drop arcade game.
 
 %prep
 %autosetup -n %{name}-%{version}
+tar -I zstd -xf %{SOURCE1}
+mkdir -p .cargo
+cat > .cargo/config.toml << 'EOF'
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+EOF
 
 %build
-cargo build --release --locked
+cargo build --release --offline
 
 %check
-cargo test --release --locked
+cargo test --release --offline
 
 %install
 install -Dpm 0755 target/release/%{name} %{buildroot}%{_bindir}/%{name}
+if [ -f docs/%{name}.1 ]; then
+    install -Dpm 0644 docs/%{name}.1 %{buildroot}%{_mandir}/man1/%{name}.1
+fi
 install -Dpm 0644 README.md %{buildroot}%{_docdir}/%{name}/README.md
 
 %files
 %license LICENSE LICENSE-MIT LICENSE-APACHE
 %doc README.md
 %{_bindir}/%{name}
+%{_mandir}/man1/%{name}.1*
 
 %changelog
 * Sat Nov 21 2026 Kushagra Kumar (kk376) <kkushagra86@gmail.com> - 0.1.1-1
