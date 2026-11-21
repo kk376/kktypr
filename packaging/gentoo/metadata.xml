@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>kkushagra86@gmail.com</email>
+		<name>Kushagra Kumar (kk376)</name>
+	</maintainer>
+	<upstream>
+		<bugs-to>https://github.com/kk376/kktypr/issues</bugs-to>
+		<remote-id type="github">kk376/kktypr</remote-id>
+	</upstream>
+</pkgmetadata>

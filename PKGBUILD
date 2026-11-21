@@ -1,0 +1,31 @@
+# Maintainer: Kushagra Kumar (kk376) <kkushagra86@gmail.com>
+pkgname=kktypr
+pkgver=0.1.1
+pkgrel=1
+pkgdesc="A blazingly fast touch typing academy and developer syntax tutor for your terminal"
+arch=('x86_64' 'aarch64')
+url="https://github.com/kk376/kktypr"
+license=('MIT' 'Apache-2.0')
+depends=('glibc')
+makedepends=('cargo' 'rust')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/kk376/kktypr/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$pkgname-$pkgver"
+    cargo build --release --locked
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    cargo test --release --locked
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    install -Dm755 "target/release/$pkgname" "$pkgdir/usr/bin/$pkgname"
+    install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "LICENSE-MIT" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
+    install -Dm644 "LICENSE-APACHE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-APACHE"
+}

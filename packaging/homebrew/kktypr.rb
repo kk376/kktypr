@@ -1,0 +1,31 @@
+class Kktypr < Formula
+  desc "Terminal touch typing academy and developer code syntax trainer in pure Rust"
+  homepage "https://github.com/kk376/kktypr"
+  license any_of: ["MIT", "Apache-2.0"]
+  version "0.1.1"
+
+  on_macos do
+    url "https://github.com/kk376/kktypr/archive/refs/tags/v0.1.1.tar.gz"
+    sha256 "SKIP"
+    depends_on "rust" => :build
+
+    def install
+      system "cargo", "install", *std_cargo_args
+      doc.install "README.md" if File.exist?("README.md")
+    end
+  end
+
+  on_linux do
+    url "https://github.com/kk376/kktypr/releases/download/v0.1.1/kktypr-linux-musl-x86_64"
+    sha256 "SKIP"
+
+    def install
+      bin.install "kktypr"
+      doc.install "README.md" if File.exist?("README.md")
+    end
+  end
+
+  test do
+    assert_match "kktypr 0.1.1", shell_output("#{bin}/kktypr --version")
+  end
+end

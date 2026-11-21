@@ -1,0 +1,7 @@
+kktypr (0.1.1-1) unstable; urgency=medium
+
+  * Release version 0.1.1.
+  * Modernized toolchain, MSRV 1.88.0, and multi-OS packaging.
+  * Added 100% green GitHub Community Standards.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 21 Nov 2026 23:20:00 +0530

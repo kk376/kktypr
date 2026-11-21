@@ -33,6 +33,11 @@ jobs:
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
 
+      - name: Install packaging tools
+        run: |
+          cargo install cargo-deb --locked
+          cargo install cargo-generate-rpm --locked
+
       - name: Build release binaries
         run: |
           cargo build --release --bin kktypr --target x86_64-unknown-linux-gnu
@@ -94,7 +99,7 @@ jobs:
           pkgdesc = A blazingly fast touch typing academy and developer syntax tutor for your terminal
           url = https://github.com/kk376/kktypr
           builddate = ${BUILDDATE}
-          packager = Kushagra Kumar (kk376) <packaging@kkfetch.rs>
+          packager = Kushagra Kumar (kk376) <kkushagra86@gmail.com>
           size = ${SIZE}
           arch = x86_64
           license = MIT
@@ -104,7 +109,15 @@ jobs:
           (cd "${PKGDIR}" && tar --zstd -cf "../dist/kktypr-${VERSION}-1-x86_64.pkg.tar.zst" .PKGINFO usr)
           rm -rf "${PKGDIR}"
 
-          # 5. Generate SHA256 checksums
+          # 5. Debian Package (.deb)
+          cargo deb --target x86_64-unknown-linux-gnu --no-build
+          cp target/x86_64-unknown-linux-gnu/debian/*.deb dist/
+
+          # 6. RPM Package (.rpm)
+          cargo generate-rpm --target x86_64-unknown-linux-gnu
+          cp target/generate-rpm/*.rpm dist/ || cp target/x86_64-unknown-linux-gnu/generate-rpm/*.rpm dist/
+
+          # 7. Generate SHA256 checksums
           (cd dist && sha256sum * > SHA256SUMS.txt)
 
       - name: Publish GitHub Release

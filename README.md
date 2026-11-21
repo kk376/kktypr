@@ -166,10 +166,24 @@ Install directly from crates.io into `~/.cargo/bin`:
 cargo install kktypr
 ```
 
+Or install pre-compiled binaries instantly via `cargo-binstall`:
+
+```bash
+cargo binstall kktypr
+```
+
 Or install latest development version from GitHub:
 
 ```bash
 cargo install --git https://github.com/kk376/kktypr
+```
+
+### Universal POSIX Installer
+
+For automated environments, CI/CD runners, and quick setup:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/kk376/kktypr/main/install.sh | bash
 ```
 
 Then run it from anywhere in your terminal:
@@ -178,7 +192,7 @@ Then run it from anywhere in your terminal:
 kktypr
 ```
 
-*(Ensure `~/.cargo/bin` is in your `$PATH`, which is configured automatically by `rustup`).*
+*(Ensure `~/.cargo/bin` or `/usr/local/bin` is in your `$PATH`).*
 
 Or install from a local clone:
 
@@ -191,7 +205,7 @@ cargo install --path .
 ### Build from source
 
 #### Prerequisites
-- **Rust 1.85+**
+- **Rust 1.88.0+ (MSRV)**
 - Standard terminal emulator with UTF-8 support (Ghostty, Foot, Alacritty, Kitty, WezTerm, GNOME Terminal)
 
 ```bash
@@ -209,16 +223,21 @@ cargo build --release
 ./target/release/kktypr
 ```
 
-### Multi-OS Packages (Packaging in Progress)
+### Distribution Packages & Packaging Suite
 
-Pre-built native packages and package manager repositories are being prepared for:
-- **Ubuntu / Debian / Linux Mint** (`.deb` / PPA)
-- **Fedora / RHEL / Rocky Linux** (`.rpm` / Copr)
-- **Arch Linux** (AUR / Pacman)
-- **openSUSE** (OBS)
-- **macOS** (Homebrew tap)
-- **Windows** (Scoop bucket / standalone zip)
-- **Static Linux** (`x86_64` and `aarch64` musl standalone static binaries)
+Full package definitions, recipes, and build instructions are maintained in [`packaging/`](packaging/):
+- **Arch Linux (AUR)**: [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) and root [`PKGBUILD`](PKGBUILD)
+- **Debian / Ubuntu**: [`packaging/debian/`](packaging/debian/) and `cargo-deb`
+- **Fedora / RHEL / Copr**: [`packaging/rpm/kktypr.spec`](packaging/rpm/kktypr.spec) and `cargo-generate-rpm`
+- **Homebrew (macOS & Linux)**: [`packaging/homebrew/kktypr.rb`](packaging/homebrew/kktypr.rb)
+- **Nix / NixOS**: Root [`flake.nix`](flake.nix) and [`packaging/nix/`](packaging/nix/)
+- **Alpine Linux**: [`packaging/alpine/APKBUILD`](packaging/alpine/APKBUILD)
+- **Void Linux**: [`packaging/void/template`](packaging/void/template)
+- **Gentoo**: [`packaging/gentoo/`](packaging/gentoo/)
+- **openSUSE**: [`packaging/opensuse/kktypr.spec`](packaging/opensuse/kktypr.spec)
+- **Windows (Scoop)**: [`packaging/scoop/kktypr.json`](packaging/scoop/kktypr.json)
+- **Android (Termux)**: [`packaging/termux/build.sh`](packaging/termux/build.sh)
+- **KISS Linux**: [`packaging/kiss/`](packaging/kiss/)
 
 ---
 
