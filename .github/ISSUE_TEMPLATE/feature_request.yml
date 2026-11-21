@@ -1,0 +1,45 @@
+name: Feature Request
+description: Propose a new capability, curriculum drill, or UI enhancement for kktypr
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement to kktypr! Please describe your proposal below.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      options:
+        - Curriculum / Language Syntax Drills (new programming languages or symbol sets)
+        - Analytics & Weak-Key Heatmap (metrics, WPM calculations, diagnostic reporting)
+        - Terminal User Interface & Theme Ergonomics (color palettes, keyboard layout)
+        - Game Engine & Arcade Modes (Word Drop speed, mechanics, challenges)
+        - Platform Packaging & Distribution (crates.io, distro packages, binstall)
+        - Other Improvement
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Problem or Motivation
+      description: What challenge are you encountering, or what typing skill would this feature help practice?
+      placeholder: A clear description of the motivation and learning benefit.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: How should this work in kktypr? Reference modules (`src/engine/curriculum.rs`, `src/ui/theme.rs`, `src/game/word_drop.rs`) if applicable.
+      placeholder: Describe the technical implementation or proposed drill structure.
+    validations:
+      required: true
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context or Code Snippets
+      description: Provide sample code snippets, drill text examples, or layout mockups.
+    validations:
+      required: false

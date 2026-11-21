@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/kk376/kktypr/discussions
+    about: Ask questions, share custom syntax drill ideas, or discuss typing ergonomics.
+  - name: Security Vulnerability Report
+    url: https://github.com/kk376/kktypr/security/advisories/new
+    about: Report potential security vulnerabilities privately.
