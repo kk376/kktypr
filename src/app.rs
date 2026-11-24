@@ -102,7 +102,15 @@ impl App {
 
     pub fn sync_and_save_profile(&mut self) {
         self.profile_store.update_active(&self.profile);
-        let _ = self.profile_store.save();
+        if let Err(e) = self.profile_store.save() {
+            self.status_notification = Some(format!("Warning: failed to save profile ({})", e));
+        }
+    }
+
+    pub fn update_playfield_size(&mut self, term_width: u16, term_height: u16) {
+        // Matches `render_word_drop` layout: 2 border cols, 3 HUD + 2 floor rows.
+        self.game
+            .set_dimensions(term_width.saturating_sub(2), term_height.saturating_sub(5));
     }
 
     pub fn sync_active_from_store(&mut self) {
@@ -132,6 +140,15 @@ impl App {
             .get(self.selected_course_idx)
             .and_then(|c| c.lessons.get(self.selected_lesson_idx))
             .and_then(|l| l.exercises.get(self.selected_exercise_idx))
+    }
+
+    /// Returns the active exercise metadata only when the session originated from a course lesson.
+    pub fn active_lesson_exercise(&self) -> Option<&Exercise> {
+        if self.session_origin == AppScreen::LessonSelect {
+            self.current_exercise()
+        } else {
+            None
+        }
     }
 
     /// Finds the default step index to highlight in a lesson.
@@ -170,8 +187,29 @@ impl App {
     }
 
     pub fn start_speed_test(&mut self, duration_secs: u64) {
-        let test_text = "Software engineering is the systematic application of engineering approaches to the development of software. Clean room design ensures that software implementations remain strictly independent of proprietary reference code. High performance terminal user interfaces provide immediate feedback, predictable latency, and maximum developer focus. Touch typing empowers engineers to express ideas without cognitive friction.";
-        let session = TypingSession::new(test_text, Some(Duration::from_secs(duration_secs)));
+        const PARAGRAPHS: &[&str] = &[
+            "Software engineering is the systematic application of structured methods to the design, testing, and maintenance of reliable programs.",
+            "Clean architecture separates business logic from terminal rendering so every component can be verified independently and changed with confidence.",
+            "Consistent touch typing builds muscle memory across home, top, and bottom rows, letting engineers express complex ideas at the speed of thought.",
+            "Predictable keyboard ergonomics reduce finger travel on punctuation and brackets when writing nested expressions, closures, and type signatures.",
+            "Good command line tools start quickly, avoid unnecessary allocations in tight loops, and restore terminal state cleanly if interrupted.",
+            "Strong test suites catch edge cases early by exercising boundary conditions, Unicode string slicing, and error recovery paths.",
+            "Practical ergonomics come from rhythm rather than bursts of speed: keep wrists neutral, strike lightly, and focus on steady accuracy first.",
+            "Careful version control keeps changesets cohesive and small so reviewers can trace why each invariant exists without guessing.",
+        ];
+        let count = match duration_secs {
+            0..=90 => 4,
+            91..=180 => 6,
+            _ => PARAGRAPHS.len(),
+        };
+        let mut combined = String::new();
+        for i in 0..(if duration_secs > 180 { 10 } else { count }) {
+            if !combined.is_empty() {
+                combined.push(' ');
+            }
+            combined.push_str(PARAGRAPHS[i % PARAGRAPHS.len()]);
+        }
+        let session = TypingSession::new(&combined, Some(Duration::from_secs(duration_secs)));
         self.active_session = Some(session);
         self.session_origin = AppScreen::SpeedTestSelect;
         self.last_speed_test_secs = duration_secs;
@@ -196,9 +234,12 @@ impl App {
 
     pub fn on_tick(&mut self) {
         if self.screen == AppScreen::WordDropGame {
+            let was_playing = self.game.state == crate::game::word_drop::GameState::Playing;
             self.game.update();
             if self.game.score > self.profile.game_high_score {
                 self.profile.game_high_score = self.game.score;
+            }
+            if was_playing && self.game.state == crate::game::word_drop::GameState::GameOver {
                 self.sync_and_save_profile();
             }
         } else if self.screen == AppScreen::TypingActive {
@@ -297,7 +338,7 @@ impl App {
                 self.name_prompt = Some(prompt);
             }
             KeyCode::Char(c) => {
-                if prompt.input.len() < 24
+                if prompt.input.chars().count() < 24
                     && (c.is_alphanumeric() || c == ' ' || c == '_' || c == '-')
                 {
                     prompt.input.push(c);
@@ -714,12 +755,17 @@ impl App {
 
     fn handle_game_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Esc => self.screen = AppScreen::MainMenu,
+            KeyCode::Esc => {
+                self.sync_and_save_profile();
+                self.screen = AppScreen::MainMenu;
+            }
             KeyCode::Char(c) => {
                 if self.game.state == crate::game::word_drop::GameState::GameOver {
                     if c == 'r' || c == 'R' {
-                        self.game.reset(80, 24);
+                        let (w, h) = (self.game.width, self.game.height);
+                        self.game.reset(w, h);
                     } else if c == 'q' || c == 'Q' {
+                        self.sync_and_save_profile();
                         self.screen = AppScreen::MainMenu;
                     }
                 } else {
@@ -1120,5 +1166,40 @@ mod tests {
         app.screen = AppScreen::SpeedTestSelect;
         app.handle_key_event(key(KeyCode::Char('q')));
         assert_eq!(app.screen, AppScreen::MainMenu);
+    }
+
+    #[test]
+    fn test_speed_test_5min_text_is_long_and_has_no_lesson_context() {
+        let mut app = App::new();
+        app.name_prompt = None;
+        app.start_speed_test(300);
+
+        let session = app.active_session.as_ref().expect("speed test session");
+        assert!(
+            session.target_text.chars().count() >= 1200,
+            "5-minute speed test must supply multi-paragraph text, got {} chars",
+            session.target_text.chars().count()
+        );
+        assert!(
+            app.active_lesson_exercise().is_none(),
+            "Speed test must not expose Lesson 1 exercise metadata"
+        );
+    }
+
+    #[test]
+    fn test_name_prompt_uses_char_limit_not_byte_len() {
+        let mut app = App::new();
+        app.name_prompt = Some(NamePromptState {
+            purpose: NamePromptPurpose::FirstRun,
+            input: "é".repeat(15), // 30 UTF-8 bytes, 15 chars
+            error_msg: None,
+        });
+        app.handle_key_event(key(KeyCode::Char('é')));
+        let prompt = app.name_prompt.as_ref().unwrap();
+        assert_eq!(
+            prompt.input.chars().count(),
+            16,
+            "Name prompt should cap by char count (24 chars), not byte length"
+        );
     }
 }

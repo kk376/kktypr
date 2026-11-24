@@ -18,7 +18,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends}
-Description: blazingly fast touch typing academy and syntax tutor for terminal
+Description: terminal touch typing academy and developer syntax trainer
  kktypr is a terminal-based touch typing tutor and developer code syntax
  trainer written in pure Rust with Ratatui and Crossterm.
  .

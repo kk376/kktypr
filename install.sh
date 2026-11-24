@@ -31,14 +31,14 @@ else
     fi
 fi
 
-# Automatically remove conflicting/shadowed binaries in user environment
-SUDO_CALLER="${SUDO_USER:-$USER}"
+# Warn if shadowed binaries exist elsewhere in user PATH locations
+SUDO_CALLER="${SUDO_USER:-${USER:-}}"
 if [ -n "$SUDO_CALLER" ]; then
     CALLER_HOME=$(getent passwd "$SUDO_CALLER" 2>/dev/null | cut -d: -f6 || echo "${HOME:-}")
     if [ -n "$CALLER_HOME" ]; then
         for conflicting in "$CALLER_HOME/.cargo/bin/kktypr" "$CALLER_HOME/.local/bin/kktypr"; do
             if [ -f "$conflicting" ] && [ "$conflicting" != "${BIN_DIR}/kktypr" ]; then
-                rm -f "$conflicting" 2>/dev/null || true
+                echo "Warning: existing binary at $conflicting may shadow ${BIN_DIR}/kktypr depending on PATH order." >&2
             fi
         done
     fi

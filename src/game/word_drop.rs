@@ -50,8 +50,8 @@ impl WordDropGame {
             last_spawn: now,
             last_update: now,
             spawn_interval: Duration::from_millis(1800),
-            width: width.max(30),
-            height: height.max(12),
+            width: width.max(10),
+            height: height.max(4),
         }
     }
 
@@ -60,8 +60,8 @@ impl WordDropGame {
     }
 
     pub fn set_dimensions(&mut self, width: u16, height: u16) {
-        self.width = width.max(30);
-        self.height = height.max(12);
+        self.width = width.max(10);
+        self.height = height.max(4);
     }
 
     pub fn spawn_word(&mut self) {
@@ -73,8 +73,13 @@ impl WordDropGame {
         let word_idx = rng.random_range(0..WORD_BANK.len());
         let text = WORD_BANK[word_idx].to_string();
 
-        let max_x = self.width.saturating_sub(text.len() as u16 + 2).max(1);
-        let x = rng.random_range(2..max_x);
+        let word_cols = text.chars().count() as u16;
+        let max_x = self.width.saturating_sub(word_cols + 2);
+        let x = if max_x > 2 {
+            rng.random_range(2..max_x)
+        } else {
+            max_x / 2
+        };
 
         self.words.push(FallingWord {
             text,
@@ -105,7 +110,7 @@ impl WordDropGame {
             self.spawn_interval = Duration::from_millis(millis);
         }
 
-        let floor = (self.height.saturating_sub(2)) as f32;
+        let floor = self.height as f32;
         let mut breached = false;
 
         for word in &mut self.words {
@@ -143,9 +148,10 @@ impl WordDropGame {
                 if let Some(expected) = word.text.chars().nth(word.typed_len) {
                     if expected == c {
                         word.typed_len += 1;
-                        if word.typed_len >= word.text.len() {
+                        let word_char_len = word.text.chars().count();
+                        if word.typed_len >= word_char_len {
                             // Word completed!
-                            let pts = (word.text.len() as u32 * 10) * (1 + self.streak / 5);
+                            let pts = (word_char_len as u32 * 10) * (1 + self.streak / 5);
                             self.score += pts;
                             self.streak += 1;
                             self.words.remove(target_idx);
@@ -177,7 +183,7 @@ impl WordDropGame {
         if let Some((idx, _)) = best_candidate {
             let word = &mut self.words[idx];
             word.typed_len = 1;
-            if word.typed_len >= word.text.len() {
+            if word.typed_len >= word.text.chars().count() {
                 // 1-letter word completed
                 self.score += 10;
                 self.streak += 1;
@@ -217,5 +223,31 @@ mod tests {
         assert!(game.score > 0);
         assert_eq!(game.streak, 1);
         assert_eq!(game.targeted_word_idx, None);
+    }
+
+    #[test]
+    fn test_word_drop_utf8_completion_and_narrow_width_no_panic() {
+        let mut game = WordDropGame::new(10, 5);
+        for _ in 0..10 {
+            game.spawn_word();
+        }
+        game.words.push(FallingWord {
+            text: "café".to_string(),
+            x: 1,
+            y: 2.0,
+            typed_len: 0,
+        });
+        let idx = game.words.len() - 1;
+        game.targeted_word_idx = Some(idx);
+
+        assert!(game.handle_char('c'));
+        assert!(game.handle_char('a'));
+        assert!(game.handle_char('f'));
+        assert!(game.handle_char('é'));
+        assert_eq!(
+            game.words.len(),
+            idx,
+            "UTF-8 word must complete after 4 chars"
+        );
     }
 }

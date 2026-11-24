@@ -47,20 +47,47 @@ impl Finger {
     }
 }
 
+/// Maps shifted or uppercase key characters to their base physical key in lowercase.
+pub fn key_base_char(c: char) -> char {
+    match c {
+        '~' => '`',
+        '!' => '1',
+        '@' => '2',
+        '#' => '3',
+        '$' => '4',
+        '%' => '5',
+        '^' => '6',
+        '&' => '7',
+        '*' => '8',
+        '(' => '9',
+        ')' => '0',
+        '_' => '-',
+        '+' => '=',
+        '{' => '[',
+        '}' => ']',
+        '|' => '\\',
+        ':' => ';',
+        '"' => '\'',
+        '<' => ',',
+        '>' => '.',
+        '?' => '/',
+        other => other.to_ascii_lowercase(),
+    }
+}
+
 pub fn get_finger_for_char(c: char) -> Option<Finger> {
     if c == ' ' {
         return Some(Finger::Thumb);
     }
-    let lower = c.to_ascii_lowercase();
-    match lower {
-        '1' | 'q' | 'a' | 'z' => Some(Finger::LeftPinky),
+    match key_base_char(c) {
+        '`' | '1' | 'q' | 'a' | 'z' => Some(Finger::LeftPinky),
         '2' | 'w' | 's' | 'x' => Some(Finger::LeftRing),
         '3' | 'e' | 'd' | 'c' => Some(Finger::LeftMiddle),
         '4' | '5' | 'r' | 't' | 'f' | 'g' | 'v' | 'b' => Some(Finger::LeftIndex),
         '6' | '7' | 'y' | 'u' | 'h' | 'j' | 'n' | 'm' => Some(Finger::RightIndex),
         '8' | 'i' | 'k' | ',' => Some(Finger::RightMiddle),
         '9' | 'o' | 'l' | '.' => Some(Finger::RightRing),
-        '0' | '-' | '=' | 'p' | '[' | ']' | ';' | '\'' | '/' => Some(Finger::RightPinky),
+        '0' | '-' | '=' | 'p' | '[' | ']' | '\\' | ';' | '\'' | '/' => Some(Finger::RightPinky),
         _ => None,
     }
 }
@@ -81,6 +108,26 @@ impl<'a> KeyboardWidget<'a> {
     pub fn with_heatmap(mut self, heatmap: &'a KeyHeatmap) -> Self {
         self.heatmap = Some(heatmap);
         self
+    }
+
+    fn is_key_active(&self, base_key: char) -> bool {
+        self.active_char
+            .is_some_and(|c| key_base_char(c) == base_key)
+    }
+
+    fn key_color(&self, base_key: char, finger: Finger) -> Color {
+        if let Some(hm) = self.heatmap {
+            let acc = hm.get_accuracy(base_key);
+            if acc >= 95.0 {
+                Color::Green
+            } else if acc >= 80.0 {
+                Color::Yellow
+            } else {
+                Color::Red
+            }
+        } else {
+            finger.color()
+        }
     }
 }
 
@@ -192,22 +239,11 @@ impl<'a> KeyboardWidget<'a> {
                         bot_spans.push(Span::raw(" "));
                     }
 
-                    let is_active = self.active_char.is_some_and(|c| c.eq_ignore_ascii_case(&k));
-
-                    let key_color = if let Some(hm) = self.heatmap {
-                        let acc = hm.get_accuracy(k);
-                        if acc >= 95.0 {
-                            Color::Green
-                        } else if acc >= 80.0 {
-                            Color::Yellow
-                        } else {
-                            Color::Red
-                        }
-                    } else {
-                        f.color()
-                    };
+                    let is_active = self.is_key_active(k);
+                    let key_color = self.key_color(k, f);
 
                     if is_active {
+                        let active_glyph = self.active_char.unwrap_or(d).to_ascii_uppercase();
                         top_spans.push(Span::styled(
                             "┏━━━┓",
                             Style::default()
@@ -221,7 +257,7 @@ impl<'a> KeyboardWidget<'a> {
                                 .add_modifier(Modifier::BOLD),
                         ));
                         mid_spans.push(Span::styled(
-                            format!(" {} ", d.to_ascii_uppercase()),
+                            format!(" {} ", active_glyph),
                             Style::default()
                                 .fg(Color::Black)
                                 .bg(Color::Cyan)
@@ -370,35 +406,25 @@ impl<'a> KeyboardWidget<'a> {
         row4: &[(char, char, Finger); 10],
     ) {
         let render_key = |key_char: char, display_char: char, finger: Finger| -> Span<'static> {
-            let is_active = self
-                .active_char
-                .is_some_and(|c| c.eq_ignore_ascii_case(&key_char));
+            let is_active = self.is_key_active(key_char);
 
             if is_active {
+                let active_glyph = self
+                    .active_char
+                    .unwrap_or(display_char)
+                    .to_ascii_uppercase();
                 Span::styled(
-                    format!(" [{}] ", display_char.to_ascii_uppercase()),
+                    format!(" [{}] ", active_glyph),
                     Style::default()
                         .fg(Color::Black)
                         .bg(Color::Cyan)
                         .add_modifier(Modifier::BOLD),
                 )
-            } else if let Some(hm) = self.heatmap {
-                let acc = hm.get_accuracy(key_char);
-                let color = if acc >= 95.0 {
-                    Color::Green
-                } else if acc >= 80.0 {
-                    Color::Yellow
-                } else {
-                    Color::Red
-                };
+            } else {
+                let color = self.key_color(key_char, finger);
                 Span::styled(
                     format!(" [{}] ", display_char.to_ascii_uppercase()),
                     Style::default().fg(color),
-                )
-            } else {
-                Span::styled(
-                    format!(" [{}] ", display_char.to_ascii_uppercase()),
-                    Style::default().fg(finger.color()),
                 )
             }
         };
@@ -477,5 +503,33 @@ impl<'a> KeyboardWidget<'a> {
         Paragraph::new(lines)
             .alignment(Alignment::Center)
             .render(inner, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_finger_mapping_covers_shifted_symbols_and_backtick_backslash() {
+        assert_eq!(get_finger_for_char('('), Some(Finger::RightRing));
+        assert_eq!(get_finger_for_char(')'), Some(Finger::RightPinky));
+        assert_eq!(get_finger_for_char('{'), Some(Finger::RightPinky));
+        assert_eq!(get_finger_for_char('}'), Some(Finger::RightPinky));
+        assert_eq!(get_finger_for_char(':'), Some(Finger::RightPinky));
+        assert_eq!(get_finger_for_char('"'), Some(Finger::RightPinky));
+        assert_eq!(get_finger_for_char('<'), Some(Finger::RightMiddle));
+        assert_eq!(get_finger_for_char('>'), Some(Finger::RightRing));
+        assert_eq!(get_finger_for_char('?'), Some(Finger::RightPinky));
+        assert_eq!(get_finger_for_char('`'), Some(Finger::LeftPinky));
+        assert_eq!(get_finger_for_char('~'), Some(Finger::LeftPinky));
+        assert_eq!(get_finger_for_char('\\'), Some(Finger::RightPinky));
+        assert_eq!(get_finger_for_char('|'), Some(Finger::RightPinky));
+
+        let kw = KeyboardWidget::new(Some('('));
+        assert!(kw.is_key_active('9'));
+        assert!(!kw.is_key_active('0'));
+        let kw_brace = KeyboardWidget::new(Some('{'));
+        assert!(kw_brace.is_key_active('['));
     }
 }

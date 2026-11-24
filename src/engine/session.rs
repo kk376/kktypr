@@ -160,6 +160,15 @@ impl TypingSession {
 
         let removed_idx = self.input_chars.len() - 1;
         self.input_chars.pop();
+        match self.char_statuses[removed_idx] {
+            CharStatus::Correct => {
+                self.correct_count = self.correct_count.saturating_sub(1);
+            }
+            CharStatus::Incorrect => {
+                self.error_count = self.error_count.saturating_sub(1);
+            }
+            CharStatus::Pending => {}
+        }
         self.char_statuses[removed_idx] = CharStatus::Pending;
         true
     }
@@ -209,5 +218,27 @@ mod tests {
         assert!(session.is_finished());
         assert_eq!(session.cursor(), 5);
         assert_eq!(session.char_statuses()[4], CharStatus::Correct);
+    }
+
+    #[test]
+    fn test_pop_char_reverts_correct_and_error_counts() {
+        let mut session = TypingSession::new("abc", None);
+        assert!(session.push_char('a'));
+        assert!(session.push_char('b'));
+        assert_eq!(session.correct_count, 2);
+
+        // Backspacing a correctly typed character must decrement correct_count
+        assert!(session.pop_char());
+        assert_eq!(session.correct_count, 1);
+
+        assert!(!session.push_char('z')); // wrong
+        assert_eq!(session.error_count, 1);
+        assert!(session.pop_char());
+        assert_eq!(session.error_count, 0);
+
+        assert!(session.push_char('b'));
+        assert!(session.push_char('c'));
+        assert_eq!(session.correct_count, 3);
+        assert_eq!(session.error_count, 0);
     }
 }

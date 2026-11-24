@@ -90,7 +90,7 @@ impl UserProfile {
             let data_dir = proj.data_local_dir();
             data_dir.join("profile.json")
         } else {
-            PathBuf::from("profile.json")
+            std::env::temp_dir().join("kktypr-profile.json")
         }
     }
 }
@@ -226,8 +226,34 @@ impl ProfileStore {
             let data_dir = proj.data_local_dir();
             data_dir.join("profiles.json")
         } else {
-            PathBuf::from("profiles.json")
+            std::env::temp_dir().join("kktypr-profiles.json")
         }
+    }
+
+    /// Loads `ProfileStore` from `path`, backing up corrupt JSON instead of silently discarding it.
+    pub fn load_from_path(path: &std::path::Path) -> Self {
+        if path.exists()
+            && let Ok(content) = fs::read_to_string(path)
+        {
+            match serde_json::from_str::<ProfileStore>(&content) {
+                Ok(mut store) => {
+                    if store.profiles.is_empty() {
+                        store = Self::default();
+                    }
+                    store.is_first_run = false;
+                    return store;
+                }
+                Err(_) => {
+                    let ts = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let backup = path.with_extension(format!("corrupt.{}.bak", ts));
+                    let _ = fs::copy(path, backup);
+                }
+            }
+        }
+        Self::default()
     }
 
     pub fn load_or_default() -> Self {
@@ -239,15 +265,7 @@ impl ProfileStore {
         {
             let path = Self::storage_path();
             if path.exists() {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(mut store) = serde_json::from_str::<ProfileStore>(&content) {
-                        if store.profiles.is_empty() {
-                            store = Self::default();
-                        }
-                        store.is_first_run = false;
-                        return store;
-                    }
-                }
+                return Self::load_from_path(&path);
             }
 
             // Check legacy single-profile file
@@ -289,9 +307,27 @@ impl ProfileStore {
         let json =
             serde_json::to_string_pretty(self).map_err(|e| std::io::Error::other(e.to_string()))?;
 
-        let tmp_path = path.with_extension("tmp");
-        fs::write(&tmp_path, json)?;
-        fs::rename(&tmp_path, path)?;
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp_name = format!(
+            ".{}.tmp.{}.{}",
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("profiles"),
+            std::process::id(),
+            nanos
+        );
+        let tmp_path = path.with_file_name(tmp_name);
+        if let Err(e) = fs::write(&tmp_path, json) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e);
+        }
+        if let Err(e) = fs::rename(&tmp_path, path) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e);
+        }
         Ok(())
     }
 }
@@ -385,5 +421,26 @@ mod tests {
 
         // Clean up
         let _ = fs::remove_file(test_file);
+    }
+
+    #[test]
+    fn test_load_from_path_backs_up_corrupt_json() {
+        let dir = std::env::temp_dir().join(format!("kktypr_corrupt_{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let profile_path = dir.join("profiles.json");
+        fs::write(&profile_path, "{ not valid json ").unwrap();
+
+        let store = ProfileStore::load_from_path(&profile_path);
+        assert_eq!(store.active().name, "Typist");
+
+        let has_backup = fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .any(|e| e.file_name().to_string_lossy().contains(".corrupt."));
+        assert!(
+            has_backup,
+            "Corrupt profile file must be backed up before reset"
+        );
+        let _ = fs::remove_dir_all(&dir);
     }
 }

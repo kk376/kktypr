@@ -36,4 +36,4 @@ package() {
 	install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }
 
-sha512sums="SKIP"
+sha512sums="1f100b80e21578b5729777392225218d996700388a081f294c6458b81b939b89d5abc4e6c7f01dddc310ac764ddb465dcfc2fd6cfb08083498798569d52db56c"
