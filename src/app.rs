@@ -56,6 +56,8 @@ pub struct App {
     pub status_notification: Option<String>,
     pub session_origin: AppScreen,
     pub last_speed_test_secs: u64,
+    pub last_prompt_text: Option<String>,
+    pub lesson_completed_before_session: bool,
     pub should_quit: bool,
 }
 
@@ -96,6 +98,8 @@ impl App {
             status_notification: None,
             session_origin: AppScreen::MainMenu,
             last_speed_test_secs: 60,
+            last_prompt_text: None,
+            lesson_completed_before_session: false,
             should_quit: false,
         }
     }
@@ -105,6 +109,61 @@ impl App {
         if let Err(e) = self.profile_store.save() {
             self.status_notification = Some(format!("Warning: failed to save profile ({})", e));
         }
+    }
+
+    pub fn difficulty_mode(&self) -> crate::engine::curriculum::DifficultyMode {
+        self.profile.difficulty_mode
+    }
+
+    pub fn required_accuracy(&self) -> f64 {
+        self.profile.difficulty_mode.min_accuracy()
+    }
+
+    pub fn cycle_difficulty_mode(&mut self, forward: bool) {
+        self.profile.difficulty_mode = if forward {
+            self.profile.difficulty_mode.next()
+        } else {
+            self.profile.difficulty_mode.prev()
+        };
+        self.sync_and_save_profile();
+    }
+
+    pub fn is_lesson_completed(&self, course_idx: usize, lesson_idx: usize) -> bool {
+        self.courses
+            .get(course_idx)
+            .and_then(|c| c.lessons.get(lesson_idx).map(|l| (c, l)))
+            .is_some_and(|(course, lesson)| {
+                !lesson.exercises.is_empty()
+                    && (0..lesson.exercises.len()).all(|ex_idx| {
+                        self.profile
+                            .is_exercise_completed(&course.id, lesson.number, ex_idx)
+                    })
+            })
+    }
+
+    pub fn last_session_passed(&self) -> bool {
+        let Some(ref metrics) = self.last_metrics else {
+            return false;
+        };
+        if self.session_origin == AppScreen::LessonSelect {
+            self.profile.difficulty_mode.passed(metrics)
+        } else {
+            metrics.accuracy_pct >= 90.0
+        }
+    }
+
+    pub fn should_return_to_lesson_menu(&self) -> bool {
+        let Some(lesson) = self
+            .courses
+            .get(self.selected_course_idx)
+            .and_then(|c| c.lessons.get(self.selected_lesson_idx))
+        else {
+            return true;
+        };
+        let at_last_chapter = self.selected_exercise_idx + 1 >= lesson.exercises.len();
+        let finished_final_remaining = !self.lesson_completed_before_session
+            && self.is_lesson_completed(self.selected_course_idx, self.selected_lesson_idx);
+        at_last_chapter || finished_final_remaining
     }
 
     pub fn update_playfield_size(&mut self, term_width: u16, term_height: u16) {
@@ -178,8 +237,16 @@ impl App {
     }
 
     pub fn start_current_exercise(&mut self) {
-        if let Some(exercise) = self.current_exercise() {
-            let session = TypingSession::new(&exercise.target_text, None);
+        let completed_before =
+            self.is_lesson_completed(self.selected_course_idx, self.selected_lesson_idx);
+        let prev = self.last_prompt_text.as_deref();
+        if let Some(chosen) = self
+            .current_exercise()
+            .map(|exercise| exercise.pick_text(prev).to_string())
+        {
+            self.lesson_completed_before_session = completed_before;
+            self.last_prompt_text = Some(chosen.clone());
+            let session = TypingSession::new(&chosen, None);
             self.active_session = Some(session);
             self.session_origin = AppScreen::LessonSelect;
             self.screen = AppScreen::TypingActive;
@@ -187,28 +254,11 @@ impl App {
     }
 
     pub fn start_speed_test(&mut self, duration_secs: u64) {
-        const PARAGRAPHS: &[&str] = &[
-            "Software engineering is the systematic application of structured methods to the design, testing, and maintenance of reliable programs.",
-            "Clean architecture separates business logic from terminal rendering so every component can be verified independently and changed with confidence.",
-            "Consistent touch typing builds muscle memory across home, top, and bottom rows, letting engineers express complex ideas at the speed of thought.",
-            "Predictable keyboard ergonomics reduce finger travel on punctuation and brackets when writing nested expressions, closures, and type signatures.",
-            "Good command line tools start quickly, avoid unnecessary allocations in tight loops, and restore terminal state cleanly if interrupted.",
-            "Strong test suites catch edge cases early by exercising boundary conditions, Unicode string slicing, and error recovery paths.",
-            "Practical ergonomics come from rhythm rather than bursts of speed: keep wrists neutral, strike lightly, and focus on steady accuracy first.",
-            "Careful version control keeps changesets cohesive and small so reviewers can trace why each invariant exists without guessing.",
-        ];
-        let count = match duration_secs {
-            0..=90 => 4,
-            91..=180 => 6,
-            _ => PARAGRAPHS.len(),
-        };
-        let mut combined = String::new();
-        for i in 0..(if duration_secs > 180 { 10 } else { count }) {
-            if !combined.is_empty() {
-                combined.push(' ');
-            }
-            combined.push_str(PARAGRAPHS[i % PARAGRAPHS.len()]);
-        }
+        let combined = crate::engine::generate_speed_test_text(
+            duration_secs,
+            self.last_prompt_text.as_deref(),
+        );
+        self.last_prompt_text = Some(combined.clone());
         let session = TypingSession::new(&combined, Some(Duration::from_secs(duration_secs)));
         self.active_session = Some(session);
         self.session_origin = AppScreen::SpeedTestSelect;
@@ -225,7 +275,14 @@ impl App {
             .map(|(c, _, _)| c)
             .collect();
 
-        let drill_text = TargetedDrillGenerator::generate_drill(&weakest, 25);
+        let mut drill_text = TargetedDrillGenerator::generate_drill(&weakest, 35);
+        for _ in 0..3 {
+            if self.last_prompt_text.as_deref() != Some(drill_text.as_str()) {
+                break;
+            }
+            drill_text = TargetedDrillGenerator::generate_drill(&weakest, 35);
+        }
+        self.last_prompt_text = Some(drill_text.clone());
         let session = TypingSession::new(&drill_text, None);
         self.active_session = Some(session);
         self.session_origin = AppScreen::TargetedReview;
@@ -260,20 +317,22 @@ impl App {
                 self.profile.heatmap.record(k.expected, k.is_correct);
             }
 
-            // Record completion if in course mode and accuracy threshold met
+            // Record completion if in course mode and difficulty mode accuracy criteria met
             if self.session_origin == AppScreen::LessonSelect
                 && self.selected_course_idx < self.courses.len()
             {
                 let course_id = self.current_course().id.clone();
-                if let Some(ex) = self.current_exercise() {
-                    if metrics.accuracy_pct >= ex.minimum_accuracy {
-                        self.profile.record_exercise_completion(
-                            &course_id,
-                            self.selected_lesson_idx + 1,
-                            self.selected_exercise_idx,
-                            &metrics,
-                        );
-                    }
+                if self.profile.difficulty_mode.passed(&metrics)
+                    && self.current_exercise().is_some()
+                {
+                    self.profile.record_exercise_completion(
+                        &course_id,
+                        self.selected_lesson_idx + 1,
+                        self.selected_exercise_idx,
+                        &metrics,
+                    );
+                } else {
+                    self.profile.record_session_metrics(&metrics);
                 }
             } else {
                 self.profile.record_session_metrics(&metrics);
@@ -460,6 +519,14 @@ impl App {
                 self.confirm_reset_stats = true;
                 self.status_notification = None;
             }
+            KeyCode::Char('d') => {
+                self.cycle_difficulty_mode(true);
+                self.status_notification = Some(format!(
+                    "Accuracy mode set to {} ({:.0}% Min).",
+                    self.difficulty_mode().label(),
+                    self.required_accuracy()
+                ));
+            }
             KeyCode::Enter | KeyCode::Char('l') => match self.selected_menu_idx {
                 0 => self.navigate_to_mode(AppScreen::CourseSelect),
                 1 => {
@@ -571,6 +638,10 @@ impl App {
                     self.selected_course_idx += 1;
                 }
             }
+            KeyCode::Left => self.cycle_difficulty_mode(false),
+            KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('m') => {
+                self.cycle_difficulty_mode(true);
+            }
             KeyCode::Enter | KeyCode::Char('l') => {
                 self.selected_lesson_idx = 0;
                 self.selected_exercise_idx = self.default_exercise_idx_for_lesson(0);
@@ -624,6 +695,9 @@ impl App {
                     self.selected_exercise_idx = step_idx;
                 }
             }
+            KeyCode::Char('d') | KeyCode::Char('m') => {
+                self.cycle_difficulty_mode(true);
+            }
             KeyCode::Enter => {
                 self.start_current_exercise();
             }
@@ -661,33 +735,24 @@ impl App {
                 AppScreen::TargetedReview => self.start_targeted_drill(),
                 _ => self.start_current_exercise(),
             },
-            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Enter => {
-                match self.session_origin {
-                    AppScreen::LessonSelect => {
-                        // Advance to next exercise or lesson
-                        if let Some(course) = self.courses.get(self.selected_course_idx) {
-                            if let Some(lesson) = course.lessons.get(self.selected_lesson_idx) {
-                                if self.selected_exercise_idx + 1 < lesson.exercises.len() {
-                                    self.selected_exercise_idx += 1;
-                                    self.start_current_exercise();
-                                } else if self.selected_lesson_idx + 1 < course.lessons.len() {
-                                    self.selected_lesson_idx += 1;
-                                    self.selected_exercise_idx = self
-                                        .default_exercise_idx_for_lesson(self.selected_lesson_idx);
-                                    self.start_current_exercise();
-                                } else {
-                                    self.screen = AppScreen::LessonSelect;
-                                    self.selected_exercise_idx = self
-                                        .default_exercise_idx_for_lesson(self.selected_lesson_idx);
-                                }
-                            }
-                        }
-                    }
-                    _ => {
-                        self.screen = self.session_origin;
+            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Enter => match self.session_origin {
+                AppScreen::LessonSelect => {
+                    if !self.last_session_passed() {
+                        // Below active mode accuracy criteria: restart this same chapter.
+                        self.start_current_exercise();
+                    } else if self.should_return_to_lesson_menu() {
+                        self.screen = AppScreen::LessonSelect;
+                        self.selected_exercise_idx =
+                            self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                    } else {
+                        self.selected_exercise_idx += 1;
+                        self.start_current_exercise();
                     }
                 }
-            }
+                _ => {
+                    self.screen = self.session_origin;
+                }
+            },
             KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('h') => {
                 self.screen = self.session_origin;
                 if self.screen == AppScreen::LessonSelect {
@@ -1200,6 +1265,169 @@ mod tests {
             prompt.input.chars().count(),
             16,
             "Name prompt should cap by char count (24 chars), not byte length"
+        );
+    }
+
+    fn set_session_result_and_finish(app: &mut App, total: usize, correct: usize, errors: usize) {
+        let mut session = TypingSession::new(&"a".repeat(total), None);
+        for i in 0..total {
+            let c = if i < correct && (i + 1) <= (total - errors) {
+                'a'
+            } else {
+                'x'
+            };
+            session.push_char(c);
+        }
+        // Explicitly drive exact metrics by finishing via TypingSession::new
+        app.active_session = Some(session);
+        app.finish_active_session();
+    }
+
+    #[test]
+    fn test_finishing_all_4_chapters_returns_to_lesson_menu() {
+        let mut app = App::new();
+        app.name_prompt = None;
+        app.selected_course_idx = 0;
+        app.selected_lesson_idx = 0;
+
+        for chapter_idx in 0..4 {
+            app.selected_exercise_idx = chapter_idx;
+            app.start_current_exercise();
+            // Perfect completion (0 errors -> 100%)
+            let len = app.active_session.as_ref().unwrap().target_chars().len();
+            let text: String = app.active_session.as_ref().unwrap().target_text.clone();
+            for ch in text.chars() {
+                app.handle_key_event(key(KeyCode::Char(ch)));
+            }
+            assert_eq!(len, text.chars().count());
+            assert_eq!(app.screen, AppScreen::Results);
+
+            app.handle_key_event(key(KeyCode::Enter));
+            if chapter_idx < 3 {
+                assert_eq!(app.screen, AppScreen::TypingActive);
+                assert_eq!(app.selected_lesson_idx, 0);
+                assert_eq!(app.selected_exercise_idx, chapter_idx + 1);
+            } else {
+                assert_eq!(
+                    app.screen,
+                    AppScreen::LessonSelect,
+                    "After all 4 chapters finish, must return to LessonSelect instead of Lesson 2 Ch 1"
+                );
+                assert_eq!(app.selected_lesson_idx, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_low_accuracy_restarts_chapter_for_all_difficulty_modes() {
+        use crate::engine::curriculum::DifficultyMode;
+
+        // (mode, fail_total, fail_correct, fail_errors, pass_total, pass_correct, pass_errors)
+        let cases = [
+            (DifficultyMode::Easy, 100, 89, 11, 100, 90, 10),
+            (DifficultyMode::Medium, 100, 93, 7, 100, 94, 6),
+            (DifficultyMode::Hard, 100, 97, 3, 100, 98, 2),
+            (DifficultyMode::Impossible, 100, 99, 1, 100, 100, 0),
+        ];
+
+        for (mode, ft, fc, fe, pt, pc, pe) in cases {
+            let mut app = App::new();
+            app.name_prompt = None;
+            app.profile.difficulty_mode = mode;
+            app.selected_course_idx = 0;
+            app.selected_lesson_idx = 0;
+            app.selected_exercise_idx = 1; // Chapter 2 of Lesson 1
+            app.session_origin = AppScreen::LessonSelect;
+
+            // Fail accuracy criteria
+            set_session_result_and_finish(&mut app, ft, fc, fe);
+            assert_eq!(app.screen, AppScreen::Results);
+            assert!(!app.profile.is_exercise_completed("basics", 1, 1));
+
+            // Pressing Enter/Next must restart Chapter 2, NOT advance to Chapter 3
+            app.handle_key_event(key(KeyCode::Enter));
+            assert_eq!(app.screen, AppScreen::TypingActive);
+            assert_eq!(app.selected_lesson_idx, 0);
+            assert_eq!(
+                app.selected_exercise_idx, 1,
+                "{:?} failure must restart Chapter 2 instead of advancing",
+                mode
+            );
+
+            // Meet accuracy criteria
+            set_session_result_and_finish(&mut app, pt, pc, pe);
+            assert_eq!(app.screen, AppScreen::Results);
+            assert!(app.profile.is_exercise_completed("basics", 1, 1));
+
+            app.handle_key_event(key(KeyCode::Enter));
+            assert_eq!(app.screen, AppScreen::TypingActive);
+            assert_eq!(app.selected_lesson_idx, 0);
+            assert_eq!(
+                app.selected_exercise_idx, 2,
+                "{:?} pass must advance to Chapter 3",
+                mode
+            );
+        }
+    }
+
+    #[test]
+    fn test_difficulty_mode_cycling_in_menus() {
+        use crate::engine::curriculum::DifficultyMode;
+        let mut app = App::new();
+        app.name_prompt = None;
+        assert_eq!(app.profile.difficulty_mode, DifficultyMode::Medium);
+
+        app.screen = AppScreen::LessonSelect;
+        app.handle_key_event(key(KeyCode::Char('d')));
+        assert_eq!(app.profile.difficulty_mode, DifficultyMode::Hard);
+        app.handle_key_event(key(KeyCode::Char('d')));
+        assert_eq!(app.profile.difficulty_mode, DifficultyMode::Impossible);
+        app.handle_key_event(key(KeyCode::Char('d')));
+        assert_eq!(app.profile.difficulty_mode, DifficultyMode::Easy);
+        app.handle_key_event(key(KeyCode::Char('d')));
+        assert_eq!(app.profile.difficulty_mode, DifficultyMode::Medium);
+    }
+
+    #[test]
+    fn test_out_of_order_fourth_chapter_completion_returns_to_lesson_menu() {
+        let mut app = App::new();
+        app.name_prompt = None;
+        app.selected_course_idx = 0;
+        app.selected_lesson_idx = 0;
+
+        let m = TypingMetrics {
+            accuracy_pct: 96.0,
+            ..Default::default()
+        };
+        let course_id = app.current_course().id.clone();
+        // Pre-complete Chapters 2, 3, 4 (indices 1, 2, 3) leaving only Chapter 1 (idx 0)
+        for idx in 1..4 {
+            app.profile
+                .record_exercise_completion(&course_id, 1, idx, &m);
+        }
+
+        app.selected_exercise_idx = 0;
+        app.start_current_exercise();
+        set_session_result_and_finish(&mut app, 20, 20, 0);
+        assert_eq!(app.screen, AppScreen::Results);
+
+        app.handle_key_event(key(KeyCode::Enter));
+        assert_eq!(
+            app.screen,
+            AppScreen::LessonSelect,
+            "Completing the 4th remaining chapter must return to LessonSelect"
+        );
+    }
+
+    #[test]
+    fn test_speed_test_varies_and_meets_length() {
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..8 {
+            seen.insert(crate::engine::generate_speed_test_text(60, None));
+        }
+        assert!(
+            seen.len() > 1,
+            "Speed test generator should produce varied paragraph selections"
         );
     }
 }

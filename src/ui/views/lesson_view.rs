@@ -804,14 +804,15 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
     frame.render_widget(metrics_p, chunks[2]);
 
     // 4. Target Goal Card
-    if let Some(ex) = app.active_lesson_exercise() {
-        let min_required = ex.minimum_accuracy;
-        let on_track = metrics.accuracy_pct >= min_required;
+    if app.active_lesson_exercise().is_some() {
+        let mode = app.difficulty_mode();
+        let min_required = app.required_accuracy();
+        let on_track = mode.passed(&metrics);
         let goal_lines = vec![
             Line::from(vec![
                 Span::styled("Target: ", Style::default().fg(Color::Gray)),
                 Span::styled(
-                    format!("{:.0}% Min", min_required),
+                    format!("{:.0}% ({})", min_required, mode.label()),
                     Style::default()
                         .fg(Color::White)
                         .add_modifier(Modifier::BOLD),
@@ -827,7 +828,7 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
                 )
             } else {
                 Span::styled(
-                    " [ FOCUS ACCURACY ] ",
+                    " [ BELOW TARGET ] ",
                     Style::default()
                         .fg(Color::Black)
                         .bg(Theme::WARNING)
@@ -948,22 +949,22 @@ pub fn render_results(app: &App, frame: &mut Frame) {
     };
 
     let active_ex = app.active_lesson_exercise();
-    let passed = active_ex
-        .map(|e| metrics.accuracy_pct >= e.minimum_accuracy)
-        .unwrap_or(metrics.accuracy_pct >= 90.0);
+    let passed = app.last_session_passed();
+    let mode = app.difficulty_mode();
 
     let verdict_line = match active_ex {
         Some(_) if passed => Line::from(vec![Span::styled(
-            "  ★ EXERCISE PASSED ★  ",
+            format!("  ★ EXERCISE PASSED ({} Mode) ★  ", mode.label()),
             Style::default()
                 .fg(Color::Black)
                 .bg(Theme::SUCCESS)
                 .add_modifier(Modifier::BOLD),
         )]),
-        Some(ex) => Line::from(vec![Span::styled(
+        Some(_) => Line::from(vec![Span::styled(
             format!(
-                "  NEEDS PRACTICE • REQUIRED ACCURACY: {:.0}%  ",
-                ex.minimum_accuracy
+                "  NEEDS PRACTICE • REQUIRED: {:.0}% ({} Mode) • RESTARTING CHAPTER  ",
+                mode.min_accuracy(),
+                mode.label(),
             ),
             Style::default()
                 .fg(Color::White)
@@ -989,6 +990,19 @@ pub fn render_results(app: &App, frame: &mut Frame) {
         crate::app::AppScreen::TargetedReview => "[Esc] Targeted Review  ",
         _ => "[Esc] Back  ",
     };
+
+    let (primary_action_label, primary_action_color) =
+        if app.session_origin == crate::app::AppScreen::LessonSelect {
+            if !passed {
+                ("[Enter/r] Restart Chapter  ", Color::Yellow)
+            } else if app.should_return_to_lesson_menu() {
+                ("[n/Enter] Lessons Menu  ", Theme::SUCCESS)
+            } else {
+                ("[n/Enter] Next Chapter  ", Theme::SUCCESS)
+            }
+        } else {
+            ("[n/Enter] Back  ", Theme::SUCCESS)
+        };
 
     let content = vec![
         Line::from(""),
@@ -1056,9 +1070,9 @@ pub fn render_results(app: &App, frame: &mut Frame) {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                "[n/Enter] Next  ",
+                primary_action_label,
                 Style::default()
-                    .fg(Theme::SUCCESS)
+                    .fg(primary_action_color)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(back_label, Style::default().fg(Color::Cyan)),

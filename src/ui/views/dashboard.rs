@@ -131,6 +131,37 @@ pub fn render_stats(app: &App, frame: &mut Frame) {
             ),
         ]),
         Line::from(vec![
+            Span::styled("Average Gross Speed:  ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{:.1} WPM", app.profile.avg_gross_wpm()),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Average Net Speed:    ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{:.1} WPM", app.profile.avg_net_wpm()),
+                Style::default()
+                    .fg(Theme::SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Accuracy Mode:        ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!(
+                    "{} ({:.0}% Min)",
+                    app.profile.difficulty_mode.label(),
+                    app.profile.difficulty_mode.min_accuracy()
+                ),
+                Style::default()
+                    .fg(Theme::ACCENT)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
             Span::styled("Total Sessions Typed: ", Style::default().fg(Color::Gray)),
             Span::styled(
                 format!("{}", app.profile.total_sessions),

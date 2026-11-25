@@ -1,4 +1,5 @@
 use crate::analytics::heatmap::KeyHeatmap;
+use crate::engine::curriculum::DifficultyMode;
 use crate::engine::metrics::TypingMetrics;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,14 @@ pub struct UserProfile {
     pub completed_exercises: HashSet<String>,
     pub best_gross_wpm: f64,
     pub best_net_wpm: f64,
+    #[serde(default)]
+    pub total_gross_wpm: f64,
+    #[serde(default)]
+    pub total_net_wpm: f64,
+    #[serde(default)]
+    pub wpm_sample_count: usize,
+    #[serde(default)]
+    pub difficulty_mode: DifficultyMode,
     pub total_sessions: usize,
     pub game_high_score: u32,
     pub heatmap: KeyHeatmap,
@@ -24,6 +33,10 @@ impl Default for UserProfile {
             completed_exercises: HashSet::new(),
             best_gross_wpm: 0.0,
             best_net_wpm: 0.0,
+            total_gross_wpm: 0.0,
+            total_net_wpm: 0.0,
+            wpm_sample_count: 0,
+            difficulty_mode: DifficultyMode::default(),
             total_sessions: 0,
             game_high_score: 0,
             heatmap: KeyHeatmap::new(),
@@ -37,6 +50,22 @@ impl UserProfile {
         Self {
             name: name.to_string(),
             ..Default::default()
+        }
+    }
+
+    pub fn avg_gross_wpm(&self) -> f64 {
+        if self.wpm_sample_count == 0 {
+            0.0
+        } else {
+            self.total_gross_wpm / self.wpm_sample_count as f64
+        }
+    }
+
+    pub fn avg_net_wpm(&self) -> f64 {
+        if self.wpm_sample_count == 0 {
+            0.0
+        } else {
+            self.total_net_wpm / self.wpm_sample_count as f64
         }
     }
 
@@ -76,6 +105,11 @@ impl UserProfile {
 
     pub fn record_session_metrics(&mut self, metrics: &TypingMetrics) {
         self.total_sessions += 1;
+        if metrics.gross_wpm.is_finite() && metrics.net_wpm.is_finite() {
+            self.total_gross_wpm += metrics.gross_wpm.max(0.0);
+            self.total_net_wpm += metrics.net_wpm.max(0.0);
+            self.wpm_sample_count += 1;
+        }
         if metrics.gross_wpm > self.best_gross_wpm {
             self.best_gross_wpm = metrics.gross_wpm;
         }
@@ -442,5 +476,63 @@ mod tests {
             "Corrupt profile file must be backed up before reset"
         );
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_profile_average_wpm_and_backward_compat() {
+        let mut profile = UserProfile::new("Typist");
+        assert_eq!(profile.avg_gross_wpm(), 0.0);
+        assert_eq!(profile.avg_net_wpm(), 0.0);
+
+        let m1 = TypingMetrics {
+            gross_wpm: 60.0,
+            net_wpm: 54.0,
+            accuracy_pct: 95.0,
+            total_keystrokes: 100,
+            correct_keystrokes: 95,
+            error_count: 5,
+            elapsed: std::time::Duration::from_secs(20),
+        };
+        let m2 = TypingMetrics {
+            gross_wpm: 80.0,
+            net_wpm: 74.0,
+            accuracy_pct: 97.5,
+            total_keystrokes: 100,
+            correct_keystrokes: 97,
+            error_count: 3,
+            elapsed: std::time::Duration::from_secs(15),
+        };
+        profile.record_session_metrics(&m1);
+        profile.record_session_metrics(&m2);
+
+        assert!((profile.avg_gross_wpm() - 70.0).abs() < 1e-4);
+        assert!((profile.avg_net_wpm() - 64.0).abs() < 1e-4);
+        assert_eq!(profile.best_gross_wpm, 80.0);
+
+        // Old profile JSON without new average/difficulty fields must deserialize cleanly
+        // and not divide new WPM totals by pre-existing historical `total_sessions`.
+        let legacy_json = r#"{
+            "name": "Legacy",
+            "completed_exercises": [],
+            "best_gross_wpm": 90.0,
+            "best_net_wpm": 85.0,
+            "total_sessions": 10,
+            "game_high_score": 42,
+            "heatmap": { "key_metrics": {} }
+        }"#;
+        let mut legacy: UserProfile = serde_json::from_str(legacy_json).unwrap();
+        assert_eq!(
+            legacy.difficulty_mode,
+            crate::engine::curriculum::DifficultyMode::Medium
+        );
+        assert_eq!(legacy.avg_gross_wpm(), 0.0);
+        assert_eq!(legacy.avg_net_wpm(), 0.0);
+        legacy.record_session_metrics(&m1);
+        assert!((legacy.avg_gross_wpm() - 60.0).abs() < 1e-4);
+        assert!((legacy.avg_net_wpm() - 54.0).abs() < 1e-4);
+
+        profile.reset();
+        assert_eq!(profile.avg_gross_wpm(), 0.0);
+        assert_eq!(profile.avg_net_wpm(), 0.0);
     }
 }
