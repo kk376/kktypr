@@ -1,5 +1,5 @@
 use crate::analytics::profile::{ProfileStore, UserProfile};
-use crate::analytics::targeted::TargetedDrillGenerator;
+use crate::analytics::targeted::{TargetedCourse, TargetedDrillGenerator};
 use crate::engine::curriculum::{Course, Exercise};
 use crate::engine::metrics::TypingMetrics;
 use crate::engine::session::TypingSession;
@@ -47,6 +47,7 @@ pub struct App {
     pub selected_exercise_idx: usize,
     pub selected_profile_idx: usize,
     pub selected_speed_test_idx: usize,
+    pub selected_targeted_course_idx: usize,
     pub active_session: Option<TypingSession>,
     pub last_metrics: Option<TypingMetrics>,
     pub game: WordDropGame,
@@ -89,6 +90,7 @@ impl App {
             selected_exercise_idx: 0,
             selected_profile_idx: 0,
             selected_speed_test_idx: 0,
+            selected_targeted_course_idx: 0,
             active_session: None,
             last_metrics: None,
             game: WordDropGame::new(80, 24),
@@ -141,15 +143,18 @@ impl App {
             })
     }
 
-    pub fn last_session_passed(&self) -> bool {
-        let Some(ref metrics) = self.last_metrics else {
-            return false;
-        };
-        if self.session_origin == AppScreen::LessonSelect {
-            self.profile.difficulty_mode.passed(metrics)
+    pub fn targeted_course(&self) -> TargetedCourse {
+        if self.selected_targeted_course_idx == 1 {
+            TargetedCourse::Developer
         } else {
-            metrics.accuracy_pct >= 90.0
+            TargetedCourse::Basics
         }
+    }
+
+    pub fn last_session_passed(&self) -> bool {
+        self.last_metrics
+            .as_ref()
+            .is_some_and(|metrics| self.profile.difficulty_mode.passed(metrics))
     }
 
     pub fn should_return_to_lesson_menu(&self) -> bool {
@@ -267,20 +272,21 @@ impl App {
     }
 
     pub fn start_targeted_drill(&mut self) {
+        let course = self.targeted_course();
         let weakest: Vec<char> = self
             .profile
-            .heatmap
+            .heatmap_for(course)
             .weakest_keys(5, 3)
             .into_iter()
             .map(|(c, _, _)| c)
             .collect();
 
-        let mut drill_text = TargetedDrillGenerator::generate_drill(&weakest, 35);
+        let mut drill_text = TargetedDrillGenerator::generate_for_course(course, &weakest, 35);
         for _ in 0..3 {
             if self.last_prompt_text.as_deref() != Some(drill_text.as_str()) {
                 break;
             }
-            drill_text = TargetedDrillGenerator::generate_drill(&weakest, 35);
+            drill_text = TargetedDrillGenerator::generate_for_course(course, &weakest, 35);
         }
         self.last_prompt_text = Some(drill_text.clone());
         let session = TypingSession::new(&drill_text, None);
@@ -312,9 +318,32 @@ impl App {
         if let Some(session) = self.active_session.take() {
             let metrics = session.current_metrics();
 
-            // Record keystrokes into user heatmap
+            // Record keystrokes into the overall heatmap and isolated course heatmap
+            let targeted_course_scope = match self.session_origin {
+                AppScreen::LessonSelect if self.selected_course_idx < self.courses.len() => {
+                    if self.current_course().id == "developer" {
+                        Some(TargetedCourse::Developer)
+                    } else {
+                        Some(TargetedCourse::Basics)
+                    }
+                }
+                AppScreen::TargetedReview => Some(self.targeted_course()),
+                _ => None,
+            };
+
             for k in session.keystrokes() {
                 self.profile.heatmap.record(k.expected, k.is_correct);
+                match targeted_course_scope {
+                    Some(TargetedCourse::Basics) => {
+                        self.profile.basics_heatmap.record(k.expected, k.is_correct);
+                    }
+                    Some(TargetedCourse::Developer) => {
+                        self.profile
+                            .developer_heatmap
+                            .record(k.expected, k.is_correct);
+                    }
+                    None => {}
+                }
             }
 
             // Record completion if in course mode and difficulty mode accuracy criteria met
@@ -741,12 +770,30 @@ impl App {
                         // Below active mode accuracy criteria: restart this same chapter.
                         self.start_current_exercise();
                     } else if self.should_return_to_lesson_menu() {
-                        self.screen = AppScreen::LessonSelect;
+                        let total_lessons = self.current_course().lessons.len();
+                        if self.selected_lesson_idx + 1 < total_lessons {
+                            self.selected_lesson_idx += 1;
+                        }
                         self.selected_exercise_idx =
                             self.default_exercise_idx_for_lesson(self.selected_lesson_idx);
+                        self.screen = AppScreen::LessonSelect;
                     } else {
                         self.selected_exercise_idx += 1;
                         self.start_current_exercise();
+                    }
+                }
+                AppScreen::SpeedTestSelect => {
+                    if !self.last_session_passed() {
+                        self.start_speed_test(self.last_speed_test_secs);
+                    } else {
+                        self.screen = AppScreen::SpeedTestSelect;
+                    }
+                }
+                AppScreen::TargetedReview => {
+                    if !self.last_session_passed() {
+                        self.start_targeted_drill();
+                    } else {
+                        self.screen = AppScreen::TargetedReview;
                     }
                 }
                 _ => {
@@ -779,6 +826,10 @@ impl App {
                     self.selected_speed_test_idx += 1;
                 }
             }
+            KeyCode::Left => self.cycle_difficulty_mode(false),
+            KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('m') => {
+                self.cycle_difficulty_mode(true);
+            }
             KeyCode::Enter | KeyCode::Char('l') => {
                 let duration = match self.selected_speed_test_idx {
                     0 => 60,
@@ -808,6 +859,16 @@ impl App {
 
     fn handle_targeted_review_key(&mut self, key: KeyEvent) {
         match key.code {
+            KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('1') => {
+                self.selected_targeted_course_idx = 0;
+            }
+            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('2') => {
+                self.selected_targeted_course_idx = 1;
+            }
+            KeyCode::Left => self.cycle_difficulty_mode(false),
+            KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('m') => {
+                self.cycle_difficulty_mode(true);
+            }
             KeyCode::Enter | KeyCode::Char('p') | KeyCode::Char('l') => {
                 self.start_targeted_drill();
             }
@@ -1311,9 +1372,16 @@ mod tests {
                 assert_eq!(
                     app.screen,
                     AppScreen::LessonSelect,
-                    "After all 4 chapters finish, must return to LessonSelect instead of Lesson 2 Ch 1"
+                    "After all 4 chapters finish, must return to LessonSelect"
                 );
-                assert_eq!(app.selected_lesson_idx, 0);
+                assert_eq!(
+                    app.selected_lesson_idx, 1,
+                    "Highlight must move to next lesson (Lesson 2)"
+                );
+                assert_eq!(
+                    app.selected_exercise_idx, 0,
+                    "Highlight must move to Chapter 1 of next lesson"
+                );
             }
         }
     }
@@ -1429,5 +1497,93 @@ mod tests {
             seen.len() > 1,
             "Speed test generator should produce varied paragraph selections"
         );
+    }
+
+    #[test]
+    fn test_speed_test_and_targeted_review_enforce_difficulty_modes() {
+        use crate::engine::curriculum::DifficultyMode;
+
+        for (mode, ft, fc, fe, pt, pc, pe) in [
+            (DifficultyMode::Easy, 100, 89, 11, 100, 90, 10),
+            (DifficultyMode::Medium, 100, 93, 7, 100, 94, 6),
+            (DifficultyMode::Hard, 100, 97, 3, 100, 98, 2),
+            (DifficultyMode::Impossible, 100, 99, 1, 100, 100, 0),
+        ] {
+            let mut app = App::new();
+            app.name_prompt = None;
+
+            // Speed Tests menu cycles difficulty mode and restarts on low accuracy
+            app.screen = AppScreen::SpeedTestSelect;
+            app.profile.difficulty_mode = mode;
+            app.start_speed_test(60);
+            set_session_result_and_finish(&mut app, ft, fc, fe);
+            assert!(!app.last_session_passed());
+            app.handle_key_event(key(KeyCode::Enter));
+            assert_eq!(
+                app.screen,
+                AppScreen::TypingActive,
+                "{:?} speed test failure must restart test instead of returning to menu",
+                mode
+            );
+            assert_eq!(app.session_origin, AppScreen::SpeedTestSelect);
+
+            set_session_result_and_finish(&mut app, pt, pc, pe);
+            assert!(app.last_session_passed());
+            app.handle_key_event(key(KeyCode::Enter));
+            assert_eq!(app.screen, AppScreen::SpeedTestSelect);
+
+            // Targeted Review menu cycles difficulty mode and restarts on low accuracy
+            app.screen = AppScreen::TargetedReview;
+            app.handle_key_event(key(KeyCode::Char('d')));
+            assert_eq!(app.profile.difficulty_mode, mode.next());
+            app.profile.difficulty_mode = mode;
+            app.start_targeted_drill();
+            set_session_result_and_finish(&mut app, ft, fc, fe);
+            assert!(!app.last_session_passed());
+            app.handle_key_event(key(KeyCode::Enter));
+            assert_eq!(
+                app.screen,
+                AppScreen::TypingActive,
+                "{:?} targeted drill failure must restart drill",
+                mode
+            );
+            assert_eq!(app.session_origin, AppScreen::TargetedReview);
+
+            set_session_result_and_finish(&mut app, pt, pc, pe);
+            assert!(app.last_session_passed());
+            app.handle_key_event(key(KeyCode::Enter));
+            assert_eq!(app.screen, AppScreen::TargetedReview);
+        }
+    }
+
+    #[test]
+    fn test_weak_key_diagnostics_isolates_basics_and_developer_courses() {
+        use crate::analytics::targeted::TargetedCourse;
+
+        let mut app = App::new();
+        app.name_prompt = None;
+
+        // Seed errors in Touch Typing Basics vs Developer Syntax
+        for _ in 0..4 {
+            app.profile.basics_heatmap.record('q', false);
+            app.profile.developer_heatmap.record('{', false);
+        }
+
+        // Option 0: Touch Typing Basics
+        app.screen = AppScreen::TargetedReview;
+        app.selected_targeted_course_idx = 0;
+        assert_eq!(app.targeted_course(), TargetedCourse::Basics);
+        app.handle_key_event(key(KeyCode::Enter));
+        let basics_text = app.active_session.as_ref().unwrap().target_text.clone();
+        assert!(basics_text.contains('q'));
+        assert!(!basics_text.chars().any(|c| "{}[]<>$|\\^~`".contains(c)));
+
+        // Switch to Option 1: Developer Syntax & Code Symbols
+        app.screen = AppScreen::TargetedReview;
+        app.handle_key_event(key(KeyCode::Down));
+        assert_eq!(app.targeted_course(), TargetedCourse::Developer);
+        app.handle_key_event(key(KeyCode::Enter));
+        let dev_text = app.active_session.as_ref().unwrap().target_text.clone();
+        assert!(dev_text.contains('{'));
     }
 }

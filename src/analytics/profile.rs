@@ -1,4 +1,5 @@
 use crate::analytics::heatmap::KeyHeatmap;
+use crate::analytics::targeted::TargetedCourse;
 use crate::engine::curriculum::DifficultyMode;
 use crate::engine::metrics::TypingMetrics;
 use directories::ProjectDirs;
@@ -24,6 +25,10 @@ pub struct UserProfile {
     pub total_sessions: usize,
     pub game_high_score: u32,
     pub heatmap: KeyHeatmap,
+    #[serde(default)]
+    pub basics_heatmap: KeyHeatmap,
+    #[serde(default)]
+    pub developer_heatmap: KeyHeatmap,
 }
 
 impl Default for UserProfile {
@@ -40,6 +45,8 @@ impl Default for UserProfile {
             total_sessions: 0,
             game_high_score: 0,
             heatmap: KeyHeatmap::new(),
+            basics_heatmap: KeyHeatmap::new(),
+            developer_heatmap: KeyHeatmap::new(),
         }
     }
 }
@@ -66,6 +73,13 @@ impl UserProfile {
             0.0
         } else {
             self.total_net_wpm / self.wpm_sample_count as f64
+        }
+    }
+
+    pub fn heatmap_for(&self, course: TargetedCourse) -> &KeyHeatmap {
+        match course {
+            TargetedCourse::Basics => &self.basics_heatmap,
+            TargetedCourse::Developer => &self.developer_heatmap,
         }
     }
 
@@ -534,5 +548,27 @@ mod tests {
         profile.reset();
         assert_eq!(profile.avg_gross_wpm(), 0.0);
         assert_eq!(profile.avg_net_wpm(), 0.0);
+    }
+
+    #[test]
+    fn test_course_specific_heatmaps_remain_isolated() {
+        let mut profile = UserProfile::new("Typist");
+        profile.basics_heatmap.record('q', false);
+        profile.developer_heatmap.record('{', false);
+
+        let basics_weak = profile.basics_heatmap.weakest_keys(5, 1);
+        let dev_weak = profile.developer_heatmap.weakest_keys(5, 1);
+
+        assert_eq!(basics_weak.len(), 1);
+        assert_eq!(basics_weak[0].0, 'q');
+        assert!(!basics_weak.iter().any(|(c, _, _)| *c == '{'));
+
+        assert_eq!(dev_weak.len(), 1);
+        assert_eq!(dev_weak[0].0, '{');
+        assert!(!dev_weak.iter().any(|(c, _, _)| *c == 'q'));
+
+        profile.reset();
+        assert!(profile.basics_heatmap.weakest_keys(5, 1).is_empty());
+        assert!(profile.developer_heatmap.weakest_keys(5, 1).is_empty());
     }
 }

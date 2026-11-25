@@ -70,9 +70,9 @@ pub fn render_profile_manager(app: &App, frame: &mut Frame) {
 
             let name_str = format!("{:<20}", profile.name);
             let stats_str = format!(
-                "Net: {:>5.1} WPM  •  Gross: {:>5.1} WPM  •  Completed: {:>2} drills  •  Arcade: {:>4}",
-                profile.best_net_wpm,
-                profile.best_gross_wpm,
+                "Avg Net: {:>5.1} WPM  •  Avg Gross: {:>5.1} WPM  •  Completed: {:>2} drills  •  Arcade: {:>4}",
+                profile.avg_net_wpm(),
+                profile.avg_gross_wpm(),
                 profile.completed_exercises.len(),
                 profile.game_high_score,
             );

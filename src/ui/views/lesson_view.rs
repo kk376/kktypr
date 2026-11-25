@@ -803,87 +803,52 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
         );
     frame.render_widget(metrics_p, chunks[2]);
 
-    // 4. Target Goal Card
-    if app.active_lesson_exercise().is_some() {
-        let mode = app.difficulty_mode();
-        let min_required = app.required_accuracy();
-        let on_track = mode.passed(&metrics);
-        let goal_lines = vec![
-            Line::from(vec![
-                Span::styled("Target: ", Style::default().fg(Color::Gray)),
-                Span::styled(
-                    format!("{:.0}% ({})", min_required, mode.label()),
-                    Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(if on_track {
-                Span::styled(
-                    " [ ON TRACK ] ",
-                    Style::default()
-                        .fg(Color::Black)
-                        .bg(Theme::SUCCESS)
-                        .add_modifier(Modifier::BOLD),
-                )
-            } else {
-                Span::styled(
-                    " [ BELOW TARGET ] ",
-                    Style::default()
-                        .fg(Color::Black)
-                        .bg(Theme::WARNING)
-                        .add_modifier(Modifier::BOLD),
-                )
-            }),
-        ];
-        let goal_p = Paragraph::new(goal_lines)
-            .alignment(Alignment::Center)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(" Lesson Goal ")
-                    .title_alignment(Alignment::Center),
-            );
-        frame.render_widget(goal_p, chunks[3]);
-    } else {
-        let mode_title = if app.session_origin == crate::app::AppScreen::SpeedTestSelect {
-            " Speed Benchmark "
-        } else {
-            " Remediation Target "
-        };
-        let goal_lines = vec![
-            Line::from(Span::styled(
-                "Target: 94%+ Clean",
+    // 4. Target Goal Card (shared across Lesson, Speed Test, and Targeted Drill)
+    let mode = app.difficulty_mode();
+    let min_required = app.required_accuracy();
+    let on_track = mode.passed(&metrics);
+    let goal_title = match app.session_origin {
+        crate::app::AppScreen::LessonSelect => " Lesson Goal ",
+        crate::app::AppScreen::SpeedTestSelect => " Speed Benchmark ",
+        _ => " Remediation Target ",
+    };
+    let goal_lines = vec![
+        Line::from(vec![
+            Span::styled("Target: ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{:.0}% ({})", min_required, mode.label()),
                 Style::default()
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
-            )),
-            Line::from(Span::styled(
-                if metrics.accuracy_pct >= 94.0 {
-                    " [ STEADY PACE ] "
-                } else {
-                    " [ SLOW DOWN ] "
-                },
+            ),
+        ]),
+        Line::from(if on_track {
+            Span::styled(
+                " [ ON TRACK ] ",
                 Style::default()
                     .fg(Color::Black)
-                    .bg(if metrics.accuracy_pct >= 94.0 {
-                        Theme::SUCCESS
-                    } else {
-                        Theme::WARNING
-                    })
+                    .bg(Theme::SUCCESS)
                     .add_modifier(Modifier::BOLD),
-            )),
-        ];
-        let goal_p = Paragraph::new(goal_lines)
-            .alignment(Alignment::Center)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(mode_title)
-                    .title_alignment(Alignment::Center),
-            );
-        frame.render_widget(goal_p, chunks[3]);
-    }
+            )
+        } else {
+            Span::styled(
+                " [ BELOW TARGET ] ",
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Theme::WARNING)
+                    .add_modifier(Modifier::BOLD),
+            )
+        }),
+    ];
+    let goal_p = Paragraph::new(goal_lines)
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(goal_title)
+                .title_alignment(Alignment::Center),
+        );
+    frame.render_widget(goal_p, chunks[3]);
 
     // 5. Cadence Insights Card (when tall) or Shortcut Hint
     if is_tall {
@@ -948,21 +913,27 @@ pub fn render_results(app: &App, frame: &mut Frame) {
         None => return,
     };
 
-    let active_ex = app.active_lesson_exercise();
     let passed = app.last_session_passed();
     let mode = app.difficulty_mode();
 
-    let verdict_line = match active_ex {
-        Some(_) if passed => Line::from(vec![Span::styled(
-            format!("  ★ EXERCISE PASSED ({} Mode) ★  ", mode.label()),
+    let session_kind = match app.session_origin {
+        crate::app::AppScreen::LessonSelect => "EXERCISE",
+        crate::app::AppScreen::SpeedTestSelect => "SPEED TEST",
+        _ => "TARGETED DRILL",
+    };
+
+    let verdict_line = if passed {
+        Line::from(vec![Span::styled(
+            format!("  ★ {} PASSED ({} Mode) ★  ", session_kind, mode.label()),
             Style::default()
                 .fg(Color::Black)
                 .bg(Theme::SUCCESS)
                 .add_modifier(Modifier::BOLD),
-        )]),
-        Some(_) => Line::from(vec![Span::styled(
+        )])
+    } else {
+        Line::from(vec![Span::styled(
             format!(
-                "  NEEDS PRACTICE • REQUIRED: {:.0}% ({} Mode) • RESTARTING CHAPTER  ",
+                "  NEEDS PRACTICE • REQUIRED: {:.0}% ({} Mode) • MUST RESTART  ",
                 mode.min_accuracy(),
                 mode.label(),
             ),
@@ -970,18 +941,7 @@ pub fn render_results(app: &App, frame: &mut Frame) {
                 .fg(Color::White)
                 .bg(Theme::ERROR)
                 .add_modifier(Modifier::BOLD),
-        )]),
-        None => Line::from(vec![Span::styled(
-            if app.session_origin == crate::app::AppScreen::SpeedTestSelect {
-                "  SPEED TEST COMPLETE  "
-            } else {
-                "  TARGETED DRILL COMPLETE  "
-            },
-            Style::default()
-                .fg(Color::Black)
-                .bg(Theme::ACCENT)
-                .add_modifier(Modifier::BOLD),
-        )]),
+        )])
     };
 
     let back_label = match app.session_origin {
@@ -991,18 +951,22 @@ pub fn render_results(app: &App, frame: &mut Frame) {
         _ => "[Esc] Back  ",
     };
 
-    let (primary_action_label, primary_action_color) =
-        if app.session_origin == crate::app::AppScreen::LessonSelect {
-            if !passed {
-                ("[Enter/r] Restart Chapter  ", Color::Yellow)
-            } else if app.should_return_to_lesson_menu() {
-                ("[n/Enter] Lessons Menu  ", Theme::SUCCESS)
-            } else {
-                ("[n/Enter] Next Chapter  ", Theme::SUCCESS)
-            }
-        } else {
-            ("[n/Enter] Back  ", Theme::SUCCESS)
+    let (primary_action_label, primary_action_color) = if !passed {
+        let label = match app.session_origin {
+            crate::app::AppScreen::LessonSelect => "[Enter/r] Restart Chapter  ",
+            crate::app::AppScreen::SpeedTestSelect => "[Enter/r] Restart Test  ",
+            _ => "[Enter/r] Restart Drill  ",
         };
+        (label, Color::Yellow)
+    } else if app.session_origin == crate::app::AppScreen::LessonSelect {
+        if app.should_return_to_lesson_menu() {
+            ("[n/Enter] Lessons Menu  ", Theme::SUCCESS)
+        } else {
+            ("[n/Enter] Next Chapter  ", Theme::SUCCESS)
+        }
+    } else {
+        ("[n/Enter] Back  ", Theme::SUCCESS)
+    };
 
     let content = vec![
         Line::from(""),
