@@ -1,12 +1,47 @@
 use crate::app::App;
+use crate::engine::curriculum::DifficultyMode;
 use crate::ui::theme::Theme;
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
 };
+
+pub fn render_mode_selector_bar(active_mode: DifficultyMode, frame: &mut Frame, area: Rect) {
+    let mut mode_spans = vec![Span::styled(
+        "  Accuracy Mode:  ",
+        Style::default()
+            .fg(Color::Gray)
+            .add_modifier(Modifier::BOLD),
+    )];
+    for mode in DifficultyMode::ALL {
+        let active = mode == active_mode;
+        let pill = format!(" {} ({:.0}%) ", mode.label(), mode.min_accuracy());
+        let style = if active {
+            Style::default()
+                .fg(Color::Black)
+                .bg(Theme::ACCENT)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        };
+        mode_spans.push(Span::styled(pill, style));
+        mode_spans.push(Span::raw("  "));
+    }
+
+    let mode_box = Paragraph::new(Line::from(mode_spans))
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Accuracy Criteria Mode ([d / m / ← / →] Switch) ")
+                .title_alignment(Alignment::Center)
+                .border_style(Style::default().fg(Color::DarkGray)),
+        );
+    frame.render_widget(mode_box, area);
+}
 
 pub fn render_main_menu(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
@@ -156,10 +191,23 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
                     .add_modifier(Modifier::BOLD),
             ),
         ]),
-        Line::from(vec![Span::styled(
-            "Focus on accuracy first. Speed emerges naturally from effortless rhythm.",
-            Style::default().fg(Color::DarkGray),
-        )]),
+        Line::from(vec![
+            Span::styled("Accuracy Mode: ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!(
+                    "{} ({:.0}% Min)",
+                    app.difficulty_mode().label(),
+                    app.required_accuracy()
+                ),
+                Style::default()
+                    .fg(Theme::ACCENT)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                "   [d] Switch Mode   •   Focus on accuracy first; speed follows rhythm.",
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]),
     ];
     let footer = Paragraph::new(footer_text)
         .alignment(Alignment::Center)
@@ -174,7 +222,11 @@ pub fn render_main_menu(app: &App, frame: &mut Frame) {
 pub fn render_course_select(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(10), Constraint::Length(3)])
+        .constraints([
+            Constraint::Min(8),
+            Constraint::Length(3),
+            Constraint::Length(3),
+        ])
         .split(frame.area());
 
     let items: Vec<ListItem> = app
@@ -210,12 +262,14 @@ pub fn render_course_select(app: &App, frame: &mut Frame) {
         .border_style(Style::default().fg(Theme::ACCENT));
 
     frame.render_widget(List::new(items).block(block), chunks[0]);
+    render_mode_selector_bar(app.difficulty_mode(), frame, chunks[1]);
 
-    let help =
-        Paragraph::new("Press Enter to view course curriculum  |  Esc to return to Main Menu")
-            .alignment(Alignment::Center)
-            .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(help, chunks[1]);
+    let help = Paragraph::new(
+        "Press [Enter] to view curriculum  |  [d/←/→] Change Accuracy Mode  |  [Esc] Main Menu",
+    )
+    .alignment(Alignment::Center)
+    .style(Style::default().fg(Color::DarkGray));
+    frame.render_widget(help, chunks[2]);
 }
 
 pub fn render_lesson_select(app: &App, frame: &mut Frame) {
@@ -317,17 +371,19 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
 
     frame.render_widget(List::new(items).block(block), chunks[0]);
 
+    let mode = app.difficulty_mode();
     let active_step_detail = course
         .lessons
         .get(app.selected_lesson_idx)
         .and_then(|l| l.exercises.get(app.selected_exercise_idx))
         .map(|ex| {
             format!(
-                "▶ Step {}: {} • {} (Min Accuracy: {:.0}%)",
+                "▶ Step {}: {} • {}  (Mode: {} • Min Accuracy: {:.0}%)",
                 step_display_num,
                 ex.exercise_type.display_name(),
                 ex.title,
-                ex.minimum_accuracy
+                mode.label(),
+                mode.min_accuracy(),
             )
         })
         .unwrap_or_else(|| {
@@ -342,7 +398,7 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from(vec![Span::styled(
-            "Navigation: [↑/↓] Lesson  |  [←/→] or [1 to 4] Step  |  [Enter] Start Step  |  [Esc] Back",
+            "Navigation: [↑/↓] Lesson  |  [←/→] or [1-4] Step  |  [d/m] Mode  |  [Enter] Start  |  [Esc] Back",
             Style::default().fg(Color::DarkGray),
         )]),
     ];
@@ -354,7 +410,11 @@ pub fn render_lesson_select(app: &App, frame: &mut Frame) {
 pub fn render_speed_test_select(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(10), Constraint::Length(3)])
+        .constraints([
+            Constraint::Min(8),
+            Constraint::Length(3),
+            Constraint::Length(3),
+        ])
         .split(frame.area());
 
     struct SpeedOption {
@@ -462,9 +522,10 @@ pub fn render_speed_test_select(app: &App, frame: &mut Frame) {
         .border_style(Style::default().fg(Theme::ACCENT));
 
     frame.render_widget(List::new(items).block(block), chunks[0]);
+    render_mode_selector_bar(app.difficulty_mode(), frame, chunks[1]);
 
-    let help = Paragraph::new("Navigation: [↑/k] Up  |  [↓/j] Down  |  [Enter/l] Start Speed Test  |  [1/2/5] Direct  |  [Esc/q/h] Back")
+    let help = Paragraph::new("Navigation: [↑/k] Up  |  [↓/j] Down  |  [d/←/→] Mode  |  [Enter/l] Start  |  [1/2/5] Direct  |  [Esc/q/h] Back")
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(help, chunks[1]);
+    frame.render_widget(help, chunks[2]);
 }

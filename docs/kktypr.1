@@ -1,13 +1,13 @@
-.TH KKTYPR 1 "November 2026" "kktypr 0.1.1" "User Commands"
+.TH KKTYPR 1 "November 2026" "kktypr 0.2.0" "User Commands"
 .SH NAME
-kktypr \- A blazingly fast touch typing academy and developer syntax tutor for your terminal
+kktypr \- Terminal touch typing academy and developer syntax trainer
 .SH SYNOPSIS
 .B kktypr
 [\fIOPTIONS\fR]
 .SH DESCRIPTION
 .B kktypr
-is a high-performance terminal touch typing tutor and developer syntax trainer written in pure Rust (Edition 2024) powered by Ratatui and Crossterm.
-It features stationary typewriter cursor layout physics, dual structured curricula (Fundamentals and Developer Code Syntax), real-time keystroke precision metrics, weak-key heatmap analysis, dynamic remedial drill synthesis, and a 60 FPS Word Drop arcade mode.
+is a terminal touch typing tutor and developer syntax trainer written in Rust (Edition 2024) using Ratatui and Crossterm.
+It features stationary cursor layout drills, dual structured curricula (Fundamentals and Developer Code Syntax), real-time keystroke accuracy and WPM metrics, weak-key heatmap analysis, targeted remediation drills, and a Word Drop arcade mode.
 .SH OPTIONS
 .TP
 \fB\-h\fR, \fB\-\-help\fR
@@ -33,8 +33,8 @@ Select lesson, confirm action, or restart drill.
 Safely exit application and restore terminal raw mode.
 .SH FILES
 .TP
-\fI~/.local/state/kktypr/stats.json\fR
-Atomic XDG state persistence containing user accuracy heatmaps, bigram error profiles, and lesson completion history.
+\fI~/.local/share/kktypr/profiles.json\fR
+Multi-profile persistence containing user accuracy heatmaps, lifetime WPM records, and completed exercise history.
 .SH AUTHORS
 Authored by Kushagra Kumar (kk376) <kkushagra86@gmail.com>.
 .SH BUGS

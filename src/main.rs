@@ -23,9 +23,7 @@ fn handle_cli_args<T: AsRef<str>>(args: &[T]) -> Option<bool> {
             }
             "-h" | "--help" => {
                 println!("kktypr {}", env!("CARGO_PKG_VERSION"));
-                println!(
-                    "A blazingly fast touch typing academy and developer syntax tutor for your terminal\n"
-                );
+                println!("Terminal touch typing academy and developer syntax trainer\n");
                 println!("USAGE:\n    kktypr [OPTIONS]\n");
                 println!("OPTIONS:\n    -h, --help          Print help information");
                 println!("    -v, -V, --version   Print version information");
@@ -35,6 +33,37 @@ fn handle_cli_args<T: AsRef<str>>(args: &[T]) -> Option<bool> {
         }
     } else {
         None
+    }
+}
+
+struct TerminalGuard {
+    restored: bool,
+}
+
+impl TerminalGuard {
+    fn enter() -> io::Result<Self> {
+        enable_raw_mode()?;
+        let mut out = stdout();
+        if let Err(e) = execute!(out, EnterAlternateScreen) {
+            let _ = disable_raw_mode();
+            return Err(e);
+        }
+        Ok(Self { restored: false })
+    }
+
+    fn restore(&mut self) -> io::Result<()> {
+        if !self.restored {
+            self.restored = true;
+            disable_raw_mode()?;
+            execute!(stdout(), LeaveAlternateScreen)?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = self.restore();
     }
 }
 
@@ -53,32 +82,54 @@ fn main() -> io::Result<()> {
         default_panic(info);
     }));
 
-    // Initialize terminal in alternate screen and raw mode
-    enable_raw_mode()?;
-    let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
+    // Initialize terminal in alternate screen and raw mode with RAII guard
+    let mut guard = TerminalGuard::enter()?;
+    let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new();
-    let tick_rate = Duration::from_millis(16); // ~60 FPS
+    let initial_size = terminal.size()?;
+    app.update_playfield_size(initial_size.width, initial_size.height);
+
+    let tick_rate = Duration::from_millis(16); // ~60 FPS when active
+    let idle_tick_rate = Duration::from_millis(250);
     let mut last_tick = Instant::now();
+    let mut needs_redraw = true;
 
     loop {
-        terminal.draw(|frame| ui::render(&mut app, frame))?;
+        if needs_redraw {
+            terminal.draw(|frame| ui::render(&mut app, frame))?;
+            needs_redraw = false;
+        }
 
-        let timeout = tick_rate.saturating_sub(last_tick.elapsed());
-        if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
+        let is_live_screen = matches!(
+            app.screen,
+            crate::app::AppScreen::WordDropGame | crate::app::AppScreen::TypingActive
+        );
+        let poll_budget = if is_live_screen {
+            tick_rate.saturating_sub(last_tick.elapsed())
+        } else {
+            idle_tick_rate
+        };
+
+        if event::poll(poll_budget)? {
+            match event::read()? {
+                Event::Key(key) if key.kind == KeyEventKind::Press => {
                     app.handle_key_event(key);
+                    needs_redraw = true;
                 }
+                Event::Resize(w, h) => {
+                    app.update_playfield_size(w, h);
+                    needs_redraw = true;
+                }
+                _ => {}
             }
         }
 
-        if last_tick.elapsed() >= tick_rate {
+        if is_live_screen && last_tick.elapsed() >= tick_rate {
             app.on_tick();
             last_tick = Instant::now();
+            needs_redraw = true;
         }
 
         if app.should_quit {
@@ -90,9 +141,8 @@ fn main() -> io::Result<()> {
     app.sync_and_save_profile();
 
     // Cleanly restore terminal
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
+    guard.restore()?;
 
     Ok(())
 }

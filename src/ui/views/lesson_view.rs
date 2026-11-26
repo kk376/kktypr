@@ -69,7 +69,7 @@ pub fn wrap_prose_lines(text: &str, max_width: usize) -> Vec<WrappedLine> {
                     char_end: word_start,
                 });
                 line_start = word_start;
-                idx = space_end;
+                idx = word_start;
             }
         } else {
             idx = space_end;
@@ -357,6 +357,21 @@ fn render_key_drill_stage(
     frame.render_widget(stage_p, stage_area);
 }
 
+fn push_styled_run(
+    spans: &mut Vec<Span<'static>>,
+    run_text: &mut String,
+    run_style: Option<Style>,
+) {
+    if !run_text.is_empty() {
+        let s = std::mem::take(run_text);
+        if let Some(style) = run_style {
+            spans.push(Span::styled(s, style));
+        } else {
+            spans.push(Span::raw(s));
+        }
+    }
+}
+
 fn render_prose_line(
     session: &crate::engine::session::TypingSession,
     line: &WrappedLine,
@@ -375,101 +390,58 @@ fn render_prose_line(
                 .add_modifier(Modifier::BOLD),
         ));
 
+        let correct_style = Style::default()
+            .fg(Theme::SUCCESS)
+            .add_modifier(Modifier::BOLD);
+        let error_style = Style::default()
+            .fg(Color::White)
+            .bg(Theme::ERROR)
+            .add_modifier(Modifier::BOLD);
+        let pending_style = Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD);
+        let cursor_style = Style::default()
+            .fg(Color::Black)
+            .bg(Color::Cyan)
+            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+
+        let mut run_text = String::new();
+        let mut run_style: Option<Style> = None;
+
         for idx in line.char_start..line.char_end {
             if idx >= target_chars.len() {
                 break;
             }
             let c = target_chars[idx];
-
-            if idx < cursor {
+            let (disp, next_style) = if idx < cursor {
                 let status = statuses.get(idx).copied().unwrap_or(CharStatus::Pending);
                 match status {
-                    CharStatus::Correct => {
-                        if c == ' ' {
-                            spans.push(Span::raw(" "));
-                        } else {
-                            spans.push(Span::styled(
-                                c.to_string(),
-                                Style::default()
-                                    .fg(Theme::SUCCESS)
-                                    .add_modifier(Modifier::BOLD),
-                            ));
-                        }
-                    }
-                    CharStatus::Incorrect => {
-                        if c == ' ' {
-                            spans.push(Span::styled(
-                                "·",
-                                Style::default()
-                                    .fg(Color::White)
-                                    .bg(Theme::ERROR)
-                                    .add_modifier(Modifier::BOLD),
-                            ));
-                        } else {
-                            spans.push(Span::styled(
-                                c.to_string(),
-                                Style::default()
-                                    .fg(Color::White)
-                                    .bg(Theme::ERROR)
-                                    .add_modifier(Modifier::BOLD),
-                            ));
-                        }
-                    }
-                    CharStatus::Pending => {
-                        spans.push(Span::styled(
-                            c.to_string(),
-                            Style::default().fg(Color::White),
-                        ));
-                    }
+                    CharStatus::Correct => (c, correct_style),
+                    CharStatus::Incorrect => (if c == ' ' { '·' } else { c }, error_style),
+                    CharStatus::Pending => (c, Style::default().fg(Color::White)),
                 }
             } else if idx == cursor {
-                if c == ' ' {
-                    spans.push(Span::styled(
-                        "␣",
-                        Style::default()
-                            .fg(Color::Black)
-                            .bg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-                    ));
-                } else {
-                    spans.push(Span::styled(
-                        c.to_string(),
-                        Style::default()
-                            .fg(Color::Black)
-                            .bg(Color::Cyan)
-                            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-                    ));
-                }
+                (if c == ' ' { '␣' } else { c }, cursor_style)
             } else {
-                if c == ' ' {
-                    spans.push(Span::raw(" "));
-                } else {
-                    spans.push(Span::styled(
-                        c.to_string(),
-                        Style::default()
-                            .fg(Color::White)
-                            .add_modifier(Modifier::BOLD),
-                    ));
-                }
+                (c, pending_style)
+            };
+
+            if run_style != Some(next_style) {
+                push_styled_run(&mut spans, &mut run_text, run_style);
+                run_style = Some(next_style);
             }
+            run_text.push(disp);
         }
+        push_styled_run(&mut spans, &mut run_text, run_style);
     } else {
         spans.push(Span::raw("    "));
-
-        for idx in line.char_start..line.char_end {
-            if idx >= target_chars.len() {
-                break;
-            }
-            let c = target_chars[idx];
-            if c == ' ' {
-                spans.push(Span::raw(" "));
-            } else {
-                spans.push(Span::styled(
-                    c.to_string(),
-                    Style::default().fg(Color::Rgb(140, 160, 190)),
-                ));
-            }
-        }
+        let slice: String = target_chars[line.char_start..line.char_end.min(target_chars.len())]
+            .iter()
+            .collect();
+        spans.push(Span::styled(
+            slice,
+            Style::default().fg(Color::Rgb(140, 160, 190)),
+        ));
     }
 
     spans
@@ -601,15 +573,20 @@ fn render_main_typing_stage(app: &App, frame: &mut Frame, area: Rect) {
         .split(area);
 
     // 1. Instruction prompt banner
-    let prompt_desc = if let Some(ex) = app.current_exercise() {
+    let prompt_desc = if let Some(ex) = app.active_lesson_exercise() {
         format!(
             "▶ {} • {}  |  {}",
             ex.exercise_type.display_name(),
             ex.title,
             ex.prompt
         )
+    } else if app.session_origin == crate::app::AppScreen::SpeedTestSelect {
+        format!(
+            "▶ Speed Test ({}s)  |  Type steadily and maintain clean accuracy.",
+            app.last_speed_test_secs
+        )
     } else {
-        "▶ Type each highlighted word and press space. Maintain steady rhythm.".to_string()
+        "▶ Targeted Remediation Drill  |  Focus cleanly on weak keys highlighted below.".to_string()
     };
 
     let instruction_p = Paragraph::new(Line::from(vec![
@@ -826,17 +803,20 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
         );
     frame.render_widget(metrics_p, chunks[2]);
 
-    // 4. Target Goal Card
-    let min_required = app
-        .current_exercise()
-        .map(|e| e.minimum_accuracy)
-        .unwrap_or(94.0);
-    let on_track = metrics.accuracy_pct >= min_required;
+    // 4. Target Goal Card (shared across Lesson, Speed Test, and Targeted Drill)
+    let mode = app.difficulty_mode();
+    let min_required = app.required_accuracy();
+    let on_track = mode.passed(&metrics);
+    let goal_title = match app.session_origin {
+        crate::app::AppScreen::LessonSelect => " Lesson Goal ",
+        crate::app::AppScreen::SpeedTestSelect => " Speed Benchmark ",
+        _ => " Remediation Target ",
+    };
     let goal_lines = vec![
         Line::from(vec![
             Span::styled("Target: ", Style::default().fg(Color::Gray)),
             Span::styled(
-                format!("{:.0}% Min", min_required),
+                format!("{:.0}% ({})", min_required, mode.label()),
                 Style::default()
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
@@ -852,7 +832,7 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
             )
         } else {
             Span::styled(
-                " [ FOCUS ACCURACY ] ",
+                " [ BELOW TARGET ] ",
                 Style::default()
                     .fg(Color::Black)
                     .bg(Theme::WARNING)
@@ -865,7 +845,7 @@ fn render_progress_sidebar(app: &App, frame: &mut Frame, area: Rect) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Lesson Goal ")
+                .title(goal_title)
                 .title_alignment(Alignment::Center),
         );
     frame.render_widget(goal_p, chunks[3]);
@@ -933,16 +913,18 @@ pub fn render_results(app: &App, frame: &mut Frame) {
         None => return,
     };
 
-    let min_required = app
-        .current_exercise()
-        .map(|e| e.minimum_accuracy)
-        .unwrap_or(90.0);
+    let passed = app.last_session_passed();
+    let mode = app.difficulty_mode();
 
-    let passed = metrics.accuracy_pct >= min_required;
+    let session_kind = match app.session_origin {
+        crate::app::AppScreen::LessonSelect => "EXERCISE",
+        crate::app::AppScreen::SpeedTestSelect => "SPEED TEST",
+        _ => "TARGETED DRILL",
+    };
 
     let verdict_line = if passed {
         Line::from(vec![Span::styled(
-            "  ★ EXERCISE PASSED • EXCELLENT CADENCE ★  ",
+            format!("  ★ {} PASSED ({} Mode) ★  ", session_kind, mode.label()),
             Style::default()
                 .fg(Color::Black)
                 .bg(Theme::SUCCESS)
@@ -951,8 +933,9 @@ pub fn render_results(app: &App, frame: &mut Frame) {
     } else {
         Line::from(vec![Span::styled(
             format!(
-                "  NEEDS REFINEMENT • REQUIRED ACCURACY: {:.0}%  ",
-                min_required
+                "  NEEDS PRACTICE • REQUIRED: {:.0}% ({} Mode) • MUST RESTART  ",
+                mode.min_accuracy(),
+                mode.label(),
             ),
             Style::default()
                 .fg(Color::White)
@@ -966,6 +949,23 @@ pub fn render_results(app: &App, frame: &mut Frame) {
         crate::app::AppScreen::SpeedTestSelect => "[Esc] Speed Tests  ",
         crate::app::AppScreen::TargetedReview => "[Esc] Targeted Review  ",
         _ => "[Esc] Back  ",
+    };
+
+    let (primary_action_label, primary_action_color) = if !passed {
+        let label = match app.session_origin {
+            crate::app::AppScreen::LessonSelect => "[Enter/r] Restart Chapter  ",
+            crate::app::AppScreen::SpeedTestSelect => "[Enter/r] Restart Test  ",
+            _ => "[Enter/r] Restart Drill  ",
+        };
+        (label, Color::Yellow)
+    } else if app.session_origin == crate::app::AppScreen::LessonSelect {
+        if app.should_return_to_lesson_menu() {
+            ("[n/Enter] Lessons Menu  ", Theme::SUCCESS)
+        } else {
+            ("[n/Enter] Next Chapter  ", Theme::SUCCESS)
+        }
+    } else {
+        ("[n/Enter] Back  ", Theme::SUCCESS)
     };
 
     let content = vec![
@@ -1034,9 +1034,9 @@ pub fn render_results(app: &App, frame: &mut Frame) {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                "[n/Enter] Next  ",
+                primary_action_label,
                 Style::default()
-                    .fg(Theme::SUCCESS)
+                    .fg(primary_action_color)
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(back_label, Style::default().fg(Color::Cyan)),
@@ -1145,6 +1145,27 @@ mod tests {
         let mut reconstructed = String::new();
         for l in lines {
             reconstructed.push_str(&text[l.char_start..l.char_end]);
+        }
+        assert_eq!(reconstructed, text);
+    }
+
+    #[test]
+    fn test_wrap_prose_lines_short_word_then_long_unbroken_word() {
+        let text = "a supercalifragilisticexpialidocious";
+        let lines = wrap_prose_lines(text, 10);
+        let mut prev_end = 0;
+        let mut reconstructed = String::new();
+        for l in lines {
+            assert_eq!(l.char_start, prev_end, "lines must be contiguous");
+            assert!(l.char_end > l.char_start);
+            assert!(
+                l.char_end - l.char_start <= 10,
+                "wrapped line exceeded max_width: {}..{}",
+                l.char_start,
+                l.char_end
+            );
+            reconstructed.push_str(&text[l.char_start..l.char_end]);
+            prev_end = l.char_end;
         }
         assert_eq!(reconstructed, text);
     }

@@ -1,15 +1,15 @@
 # Maintainer: Kushagra Kumar (kk376) <kkushagra86@gmail.com>
 pkgname=kktypr
-pkgver=0.1.1
+pkgver=0.2.0
 pkgrel=1
-pkgdesc="A blazingly fast touch typing academy and developer syntax tutor for your terminal"
+pkgdesc="Terminal touch typing academy and developer syntax trainer in Rust"
 arch=('x86_64' 'aarch64')
 url="https://github.com/kk376/kktypr"
 license=('MIT' 'Apache-2.0')
 depends=('glibc')
 makedepends=('cargo' 'rust')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/kk376/kktypr/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('7a13817bab89b2ea68ee9a398b61045a1d7f19dffeccf43c98a44b98546d745a')
 
 build() {
     cd "$pkgname-$pkgver"

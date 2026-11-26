@@ -1,4 +1,6 @@
 use crate::analytics::heatmap::KeyHeatmap;
+use crate::analytics::targeted::TargetedCourse;
+use crate::engine::curriculum::DifficultyMode;
 use crate::engine::metrics::TypingMetrics;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
@@ -12,9 +14,21 @@ pub struct UserProfile {
     pub completed_exercises: HashSet<String>,
     pub best_gross_wpm: f64,
     pub best_net_wpm: f64,
+    #[serde(default)]
+    pub total_gross_wpm: f64,
+    #[serde(default)]
+    pub total_net_wpm: f64,
+    #[serde(default)]
+    pub wpm_sample_count: usize,
+    #[serde(default)]
+    pub difficulty_mode: DifficultyMode,
     pub total_sessions: usize,
     pub game_high_score: u32,
     pub heatmap: KeyHeatmap,
+    #[serde(default)]
+    pub basics_heatmap: KeyHeatmap,
+    #[serde(default)]
+    pub developer_heatmap: KeyHeatmap,
 }
 
 impl Default for UserProfile {
@@ -24,9 +38,15 @@ impl Default for UserProfile {
             completed_exercises: HashSet::new(),
             best_gross_wpm: 0.0,
             best_net_wpm: 0.0,
+            total_gross_wpm: 0.0,
+            total_net_wpm: 0.0,
+            wpm_sample_count: 0,
+            difficulty_mode: DifficultyMode::default(),
             total_sessions: 0,
             game_high_score: 0,
             heatmap: KeyHeatmap::new(),
+            basics_heatmap: KeyHeatmap::new(),
+            developer_heatmap: KeyHeatmap::new(),
         }
     }
 }
@@ -37,6 +57,29 @@ impl UserProfile {
         Self {
             name: name.to_string(),
             ..Default::default()
+        }
+    }
+
+    pub fn avg_gross_wpm(&self) -> f64 {
+        if self.wpm_sample_count == 0 {
+            0.0
+        } else {
+            self.total_gross_wpm / self.wpm_sample_count as f64
+        }
+    }
+
+    pub fn avg_net_wpm(&self) -> f64 {
+        if self.wpm_sample_count == 0 {
+            0.0
+        } else {
+            self.total_net_wpm / self.wpm_sample_count as f64
+        }
+    }
+
+    pub fn heatmap_for(&self, course: TargetedCourse) -> &KeyHeatmap {
+        match course {
+            TargetedCourse::Basics => &self.basics_heatmap,
+            TargetedCourse::Developer => &self.developer_heatmap,
         }
     }
 
@@ -76,6 +119,11 @@ impl UserProfile {
 
     pub fn record_session_metrics(&mut self, metrics: &TypingMetrics) {
         self.total_sessions += 1;
+        if metrics.gross_wpm.is_finite() && metrics.net_wpm.is_finite() {
+            self.total_gross_wpm += metrics.gross_wpm.max(0.0);
+            self.total_net_wpm += metrics.net_wpm.max(0.0);
+            self.wpm_sample_count += 1;
+        }
         if metrics.gross_wpm > self.best_gross_wpm {
             self.best_gross_wpm = metrics.gross_wpm;
         }
@@ -90,7 +138,7 @@ impl UserProfile {
             let data_dir = proj.data_local_dir();
             data_dir.join("profile.json")
         } else {
-            PathBuf::from("profile.json")
+            std::env::temp_dir().join("kktypr-profile.json")
         }
     }
 }
@@ -226,8 +274,34 @@ impl ProfileStore {
             let data_dir = proj.data_local_dir();
             data_dir.join("profiles.json")
         } else {
-            PathBuf::from("profiles.json")
+            std::env::temp_dir().join("kktypr-profiles.json")
         }
+    }
+
+    /// Loads `ProfileStore` from `path`, backing up corrupt JSON instead of silently discarding it.
+    pub fn load_from_path(path: &std::path::Path) -> Self {
+        if path.exists()
+            && let Ok(content) = fs::read_to_string(path)
+        {
+            match serde_json::from_str::<ProfileStore>(&content) {
+                Ok(mut store) => {
+                    if store.profiles.is_empty() {
+                        store = Self::default();
+                    }
+                    store.is_first_run = false;
+                    return store;
+                }
+                Err(_) => {
+                    let ts = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let backup = path.with_extension(format!("corrupt.{}.bak", ts));
+                    let _ = fs::copy(path, backup);
+                }
+            }
+        }
+        Self::default()
     }
 
     pub fn load_or_default() -> Self {
@@ -239,15 +313,7 @@ impl ProfileStore {
         {
             let path = Self::storage_path();
             if path.exists() {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(mut store) = serde_json::from_str::<ProfileStore>(&content) {
-                        if store.profiles.is_empty() {
-                            store = Self::default();
-                        }
-                        store.is_first_run = false;
-                        return store;
-                    }
-                }
+                return Self::load_from_path(&path);
             }
 
             // Check legacy single-profile file
@@ -289,9 +355,27 @@ impl ProfileStore {
         let json =
             serde_json::to_string_pretty(self).map_err(|e| std::io::Error::other(e.to_string()))?;
 
-        let tmp_path = path.with_extension("tmp");
-        fs::write(&tmp_path, json)?;
-        fs::rename(&tmp_path, path)?;
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let tmp_name = format!(
+            ".{}.tmp.{}.{}",
+            path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("profiles"),
+            std::process::id(),
+            nanos
+        );
+        let tmp_path = path.with_file_name(tmp_name);
+        if let Err(e) = fs::write(&tmp_path, json) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e);
+        }
+        if let Err(e) = fs::rename(&tmp_path, path) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e);
+        }
         Ok(())
     }
 }
@@ -385,5 +469,106 @@ mod tests {
 
         // Clean up
         let _ = fs::remove_file(test_file);
+    }
+
+    #[test]
+    fn test_load_from_path_backs_up_corrupt_json() {
+        let dir = std::env::temp_dir().join(format!("kktypr_corrupt_{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let profile_path = dir.join("profiles.json");
+        fs::write(&profile_path, "{ not valid json ").unwrap();
+
+        let store = ProfileStore::load_from_path(&profile_path);
+        assert_eq!(store.active().name, "Typist");
+
+        let has_backup = fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .any(|e| e.file_name().to_string_lossy().contains(".corrupt."));
+        assert!(
+            has_backup,
+            "Corrupt profile file must be backed up before reset"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_profile_average_wpm_and_backward_compat() {
+        let mut profile = UserProfile::new("Typist");
+        assert_eq!(profile.avg_gross_wpm(), 0.0);
+        assert_eq!(profile.avg_net_wpm(), 0.0);
+
+        let m1 = TypingMetrics {
+            gross_wpm: 60.0,
+            net_wpm: 54.0,
+            accuracy_pct: 95.0,
+            total_keystrokes: 100,
+            correct_keystrokes: 95,
+            error_count: 5,
+            elapsed: std::time::Duration::from_secs(20),
+        };
+        let m2 = TypingMetrics {
+            gross_wpm: 80.0,
+            net_wpm: 74.0,
+            accuracy_pct: 97.5,
+            total_keystrokes: 100,
+            correct_keystrokes: 97,
+            error_count: 3,
+            elapsed: std::time::Duration::from_secs(15),
+        };
+        profile.record_session_metrics(&m1);
+        profile.record_session_metrics(&m2);
+
+        assert!((profile.avg_gross_wpm() - 70.0).abs() < 1e-4);
+        assert!((profile.avg_net_wpm() - 64.0).abs() < 1e-4);
+        assert_eq!(profile.best_gross_wpm, 80.0);
+
+        // Old profile JSON without new average/difficulty fields must deserialize cleanly
+        // and not divide new WPM totals by pre-existing historical `total_sessions`.
+        let legacy_json = r#"{
+            "name": "Legacy",
+            "completed_exercises": [],
+            "best_gross_wpm": 90.0,
+            "best_net_wpm": 85.0,
+            "total_sessions": 10,
+            "game_high_score": 42,
+            "heatmap": { "key_metrics": {} }
+        }"#;
+        let mut legacy: UserProfile = serde_json::from_str(legacy_json).unwrap();
+        assert_eq!(
+            legacy.difficulty_mode,
+            crate::engine::curriculum::DifficultyMode::Medium
+        );
+        assert_eq!(legacy.avg_gross_wpm(), 0.0);
+        assert_eq!(legacy.avg_net_wpm(), 0.0);
+        legacy.record_session_metrics(&m1);
+        assert!((legacy.avg_gross_wpm() - 60.0).abs() < 1e-4);
+        assert!((legacy.avg_net_wpm() - 54.0).abs() < 1e-4);
+
+        profile.reset();
+        assert_eq!(profile.avg_gross_wpm(), 0.0);
+        assert_eq!(profile.avg_net_wpm(), 0.0);
+    }
+
+    #[test]
+    fn test_course_specific_heatmaps_remain_isolated() {
+        let mut profile = UserProfile::new("Typist");
+        profile.basics_heatmap.record('q', false);
+        profile.developer_heatmap.record('{', false);
+
+        let basics_weak = profile.basics_heatmap.weakest_keys(5, 1);
+        let dev_weak = profile.developer_heatmap.weakest_keys(5, 1);
+
+        assert_eq!(basics_weak.len(), 1);
+        assert_eq!(basics_weak[0].0, 'q');
+        assert!(!basics_weak.iter().any(|(c, _, _)| *c == '{'));
+
+        assert_eq!(dev_weak.len(), 1);
+        assert_eq!(dev_weak[0].0, '{');
+        assert!(!dev_weak.iter().any(|(c, _, _)| *c == 'q'));
+
+        profile.reset();
+        assert!(profile.basics_heatmap.weakest_keys(5, 1).is_empty());
+        assert!(profile.developer_heatmap.weakest_keys(5, 1).is_empty());
     }
 }

@@ -18,7 +18,7 @@ class Kktypr < Formula
 
   on_linux do
     url "https://github.com/kk376/kktypr/releases/download/v0.2.0/kktypr-0.2.0-x86_64-unknown-linux-gnu.tar.gz"
-    sha256 "32bdb3b136b0c3da127cae8fb1fd907827f40e64592ea742f5644ff3837c0d6a"
+    sha256 "425916f0198a0ec697b3bf7b32163608f6472045083612a05db06e265c26dab8"
 
     def install
       bin.install "kktypr"

@@ -12,7 +12,7 @@ This directory contains distribution package definitions, build recipes, and met
 | **Nix / NixOS** | [`nix/default.nix`](nix/default.nix), [`flake.nix`](../flake.nix) | `nix build` | Nix store path |
 | **Void Linux** | [`void/template`](void/template) | `xbps-src` | `.xbps` |
 | **Alpine Linux** | [`alpine/APKBUILD`](alpine/APKBUILD) | `abuild` | `.apk` |
-| **Gentoo Linux** | [`gentoo/kktypr-0.1.1.ebuild`](gentoo/) | `ebuild` / `emerge` | Portage ebuild |
+| **Gentoo Linux** | [`gentoo/kktypr-0.2.0.ebuild`](gentoo/) | `ebuild` / `emerge` | Portage ebuild |
 | **Homebrew** | [`homebrew/kktypr.rb`](homebrew/kktypr.rb) | `brew` | Formula / Bottled bottle |
 | **openSUSE / OBS** | [`opensuse/kktypr.spec`](opensuse/kktypr.spec) | `osc` / `rpmbuild` | `.rpm` |
 | **KISS Linux** | [`kiss/`](kiss/) | `kiss` | KISS package |
@@ -44,7 +44,7 @@ cp /path/to/kktypr/packaging/arch/PKGBUILD .
 updpkgsums
 makepkg --printsrcinfo > .SRCINFO
 git add PKGBUILD .SRCINFO
-git commit -m "Update to version 0.1.1"
+git commit -m "Update to version 0.2.0"
 git push origin master
 ```
 
@@ -59,7 +59,7 @@ git push origin master
 cargo install cargo-deb
 cargo deb
 ```
-Output: `target/debian/kktypr_0.1.1-1_amd64.deb`
+Output: `target/debian/kktypr_0.2.0-1_amd64.deb`
 
 #### Local Build with Debian Tooling
 ```bash
@@ -177,6 +177,6 @@ Or locally from source:
 
 ## Maintainer Release Checklist
 
-1. Tag the release: `git tag -a v0.1.1 -m "Release v0.1.1"` and push tags (`git push origin v0.1.1`).
+1. Tag the release: `git tag -a v0.2.0 -m "Release v0.2.0"` and push tags (`git push origin v0.2.0`).
 2. GitHub Actions automated release pipeline builds multi-OS binaries (musl, gnu, windows, Arch `.pkg.tar.zst`) and computes SHA256 checksums.
 3. Update version strings and checksums across `PKGBUILD`, `.SRCINFO`, `kktypr.spec`, `kktypr.rb`, and `APKBUILD`.

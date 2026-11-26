@@ -38,8 +38,15 @@ impl TypingMetrics {
         error_count: usize,
         elapsed: Duration,
     ) -> Self {
+        let accuracy_pct = if total_keystrokes > 0 {
+            ((correct_keystrokes as f64 / total_keystrokes as f64) * 100.0).clamp(0.0, 100.0)
+        } else {
+            100.0
+        };
+
         if total_keystrokes == 0 || elapsed.as_secs_f64() < 0.1 {
             return Self {
+                accuracy_pct,
                 total_keystrokes,
                 correct_keystrokes,
                 error_count,
@@ -54,16 +61,10 @@ impl TypingMetrics {
         let net_chars = (correct_keystrokes as f64 / 5.0) - (error_count as f64);
         let net_wpm = (net_chars / elapsed_minutes).max(0.0);
 
-        let accuracy_pct = if total_keystrokes > 0 {
-            (correct_keystrokes as f64 / total_keystrokes as f64) * 100.0
-        } else {
-            100.0
-        };
-
         Self {
             gross_wpm,
             net_wpm,
-            accuracy_pct: accuracy_pct.clamp(0.0, 100.0),
+            accuracy_pct,
             total_keystrokes,
             correct_keystrokes,
             error_count,

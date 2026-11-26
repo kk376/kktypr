@@ -1,50 +1,83 @@
+use crate::analytics::targeted::TargetedCourse;
 use crate::app::App;
 use crate::ui::keyboard::KeyboardWidget;
 use crate::ui::theme::Theme;
+use crate::ui::views::menu_view::render_mode_selector_bar;
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
 };
 
 pub fn render_targeted_review(app: &App, frame: &mut Frame) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8),  // Diagnostics header & weak key list
-            Constraint::Length(10), // Keyboard Heatmap
-            Constraint::Length(4),  // Actions
+            Constraint::Length(4), // Course selector (Basics vs Developer)
+            Constraint::Length(5), // Diagnostics header & weak key list
+            Constraint::Min(8),    // Course-specific Keyboard Heatmap
+            Constraint::Length(3), // Difficulty Mode bar
+            Constraint::Length(2), // Actions
         ])
         .split(frame.area());
 
-    let weakest = app.profile.heatmap.weakest_keys(5, 3);
+    let course_items: Vec<ListItem> = TargetedCourse::ALL
+        .iter()
+        .enumerate()
+        .map(|(idx, course)| {
+            let selected = idx == app.selected_targeted_course_idx;
+            let (prefix, style) = if selected {
+                (
+                    "  ▶  ",
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Theme::ACCENT)
+                        .add_modifier(Modifier::BOLD),
+                )
+            } else {
+                ("     ", Style::default().fg(Color::White))
+            };
+            ListItem::new(Line::from(vec![
+                Span::styled(prefix, style),
+                Span::styled(format!("[{}] {:<50}", idx + 1, course.title()), style),
+            ]))
+        })
+        .collect();
 
-    let mut lines = vec![
-        Line::from(Span::styled(
-            "Pro Diagnostics: Weak Key Analysis & Remediation",
-            Style::default()
-                .fg(Theme::ACCENT)
-                .add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-    ];
+    let course_list = List::new(course_items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Weak Key Diagnostics Scope ([↑/↓] or [1/2] Course) ")
+            .title_alignment(Alignment::Center)
+            .border_style(Style::default().fg(Theme::ACCENT)),
+    );
+    frame.render_widget(course_list, chunks[0]);
+
+    let active_course = app.targeted_course();
+    let course_heatmap = app.profile.heatmap_for(active_course);
+    let weakest = course_heatmap.weakest_keys(5, 3);
+
+    let mut lines = vec![Line::from(Span::styled(
+        format!("Diagnostics: {}", active_course.title()),
+        Style::default()
+            .fg(Theme::ACCENT)
+            .add_modifier(Modifier::BOLD),
+    ))];
 
     if weakest.is_empty() {
         lines.push(Line::from(Span::styled(
-            "No significant error patterns recorded yet! Complete several lessons or speed tests to populate the heatmap.",
+            "No weak keys recorded for this course yet! Practice lessons here to populate diagnostics.",
             Style::default().fg(Color::Gray),
         )));
     } else {
-        lines.push(Line::from(vec![Span::styled(
-            "Identified Problem Keys: ",
+        let mut key_spans = vec![Span::styled(
+            "Problem Keys: ",
             Style::default()
                 .fg(Color::White)
                 .add_modifier(Modifier::BOLD),
-        )]));
-
-        let mut key_spans = Vec::new();
+        )];
         for (key, acc, errors) in &weakest {
             let color = if *acc < 80.0 {
                 Color::Red
@@ -53,7 +86,7 @@ pub fn render_targeted_review(app: &App, frame: &mut Frame) {
             };
             key_spans.push(Span::styled(
                 format!(
-                    "  [{}] {:.1}% ({} errors)  ",
+                    "  [{}] {:.1}% ({} err)  ",
                     key.to_ascii_uppercase(),
                     acc,
                     errors
@@ -71,27 +104,29 @@ pub fn render_targeted_review(app: &App, frame: &mut Frame) {
                 .title(" Diagnostic Report "),
         )
         .alignment(Alignment::Center);
-    frame.render_widget(header_p, chunks[0]);
+    frame.render_widget(header_p, chunks[1]);
 
-    // Keyboard Heatmap widget
-    let keyboard = KeyboardWidget::new(None).with_heatmap(&app.profile.heatmap);
-    frame.render_widget(keyboard, chunks[1]);
+    // Isolated Keyboard Heatmap widget for the selected course
+    let keyboard = KeyboardWidget::new(None).with_heatmap(course_heatmap);
+    frame.render_widget(keyboard, chunks[2]);
+
+    render_mode_selector_bar(app.difficulty_mode(), frame, chunks[3]);
 
     // Action footer
-    let actions = vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "Press [Enter / p] to Generate Custom Targeted Practice Drill  ",
-                Style::default()
-                    .fg(Theme::SUCCESS)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled("|  [Esc / q] Main Menu", Style::default().fg(Color::Gray)),
-        ]),
-    ];
+    let actions = vec![Line::from(vec![
+        Span::styled(
+            "[Enter / p] Start Targeted Drill  ",
+            Style::default()
+                .fg(Theme::SUCCESS)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            "|  [↑/↓ / 1-2] Course  |  [d/←/→] Mode  |  [Esc / q] Main Menu",
+            Style::default().fg(Color::Gray),
+        ),
+    ])];
     let action_p = Paragraph::new(actions).alignment(Alignment::Center);
-    frame.render_widget(action_p, chunks[2]);
+    frame.render_widget(action_p, chunks[4]);
 }
 
 pub fn render_stats(app: &App, frame: &mut Frame) {
@@ -127,6 +162,37 @@ pub fn render_stats(app: &App, frame: &mut Frame) {
                 format!("{:.1} WPM", app.profile.best_net_wpm),
                 Style::default()
                     .fg(Theme::SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Average Gross Speed:  ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{:.1} WPM", app.profile.avg_gross_wpm()),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Average Net Speed:    ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!("{:.1} WPM", app.profile.avg_net_wpm()),
+                Style::default()
+                    .fg(Theme::SUCCESS)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Accuracy Mode:        ", Style::default().fg(Color::Gray)),
+            Span::styled(
+                format!(
+                    "{} ({:.0}% Min)",
+                    app.profile.difficulty_mode.label(),
+                    app.profile.difficulty_mode.min_accuracy()
+                ),
+                Style::default()
+                    .fg(Theme::ACCENT)
                     .add_modifier(Modifier::BOLD),
             ),
         ]),
