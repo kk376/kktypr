@@ -1,6 +1,6 @@
 # Maintainer: Kushagra Kumar (kk376) <kkushagra86@gmail.com>
 pkgname=kktypr
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="Terminal touch typing academy and developer syntax trainer in Rust"
 arch=('x86_64' 'aarch64')

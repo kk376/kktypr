@@ -1,6 +1,6 @@
 # Template file for 'kktypr'
 pkgname=kktypr
-version=0.2.0
+version=0.3.0
 revision=1
 build_style=cargo
 short_desc="Terminal touch typing academy and developer code syntax trainer in pure Rust"

@@ -1,3 +1,9 @@
+kktypr (0.3.0-1) unstable; urgency=medium
+
+  * Release version 0.3.0: Weak-key course isolation, avg WPM stats, difficulty modes, and CI hardening.
+
+ -- Kushagra Kumar <kkushagra86@gmail.com>  Sat, 28 Nov 2026 10:35:00 +0530
+
 kktypr (0.2.0-1) unstable; urgency=medium
 
   * Release version 0.2.0: Multi-platform packaging parity and toolchain compatibility.

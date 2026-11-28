@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           kktypr
-Version:        0.2.0
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Terminal touch typing academy and developer code syntax trainer in Rust
 
@@ -43,5 +43,8 @@ install -Dpm 0644 README.md %{buildroot}%{_docdir}/%{name}/README.md
 %{_mandir}/man1/%{name}.1*
 
 %changelog
+* Sat Nov 28 2026 Kushagra Kumar (kk376) <kkushagra86@gmail.com> - 0.3.0-1
+- Release version 0.3.0: Weak-key course isolation, avg WPM stats, difficulty modes, and CI/packaging hardening
+
 * Sat Nov 21 2026 Kushagra Kumar (kk376) <kkushagra86@gmail.com> - 0.2.0-1
 - Release version 0.2.0: Modernized toolchain, MSRV 1.88.0, and packaging matrix

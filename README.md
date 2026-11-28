@@ -229,8 +229,8 @@ sudo zypper install -y kktypr
 
 **Via Pre-built Debian Package:**
 ```bash
-curl -LO https://github.com/kk376/kktypr/releases/download/v0.2.0/kktypr_0.2.0-1_amd64.deb
-sudo dpkg -i kktypr_0.2.0-1_amd64.deb
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.3.0/kktypr_0.3.0-1_amd64.deb
+sudo dpkg -i kktypr_0.3.0-1_amd64.deb
 ```
 
 ---
@@ -239,8 +239,8 @@ sudo dpkg -i kktypr_0.2.0-1_amd64.deb
 
 **Via Pre-built Pacman Package:**
 ```bash
-curl -LO https://github.com/kk376/kktypr/releases/download/v0.2.0/kktypr-0.2.0-1-x86_64.pkg.tar.zst
-sudo pacman -U kktypr-0.2.0-1-x86_64.pkg.tar.zst
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.3.0/kktypr-0.3.0-1-x86_64.pkg.tar.zst
+sudo pacman -U kktypr-0.3.0-1-x86_64.pkg.tar.zst
 ```
 
 ---
@@ -263,14 +263,14 @@ nix profile install github:kk376/kktypr
 
 **For x86_64 Linux:**
 ```bash
-curl -LO https://github.com/kk376/kktypr/releases/download/v0.2.0/kktypr-linux-musl-x86_64
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.3.0/kktypr-linux-musl-x86_64
 chmod +x kktypr-linux-musl-x86_64
 sudo mv kktypr-linux-musl-x86_64 /usr/local/bin/kktypr
 ```
 
 **For aarch64 (ARM64) Linux:**
 ```bash
-curl -LO https://github.com/kk376/kktypr/releases/download/v0.2.0/kktypr-linux-musl-aarch64
+curl -LO https://github.com/kk376/kktypr/releases/download/v0.3.0/kktypr-linux-musl-aarch64
 chmod +x kktypr-linux-musl-aarch64
 sudo mv kktypr-linux-musl-aarch64 /usr/local/bin/kktypr
 ```
