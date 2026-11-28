@@ -9,7 +9,7 @@ license=('MIT' 'Apache-2.0')
 depends=('glibc')
 makedepends=('cargo' 'rust')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/kk376/kktypr/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('7a13817bab89b2ea68ee9a398b61045a1d7f19dffeccf43c98a44b98546d745a')
+sha256sums=('34ca5fc0e33d069368a0fd0a13cac242b31c2aa7c075859274e87735aef39d56')
 
 build() {
     cd "$pkgname-$pkgver"
